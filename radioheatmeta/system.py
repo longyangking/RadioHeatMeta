@@ -67,69 +67,113 @@ class Lattice:
         self.__area = area
 
 class Epsilon:
-    def __init__(self, epsilonvals):
-        self.__epsilonvals = epsilonvals
+    def __init__(self, epsilon_vals, epsilon_type="scalar"):
+        self.__epsilon_vals = np.array(epsilon_vals)
+        self.__epsilon_type = epsilon_type
 
     @property
-    def epsilonvals(self):
-        return self.__epsilonvals
+    def epsilon_vals(self):
+        return self.__epsilon_vals
 
     @epsilonvals.setter
-    def epsilonvals(self, epsilonvals):
-        self.__epsilonvals = epsilonvals
-
-class Mur:
-    def __init__(self, murvals):
-        self.__murvals = murvals 
+    def epsilon_vals(self, epsilon_vals):
+        self.__epsilon_vals = epsilon_vals
 
     @property
-    def murvals(self):
+    def epsilon_type(self):
+        return self.__epsilon_type
+    
+    @epsilon_type.setter
+    def epsilon_type(self, epsilon_type):
+        self.__epsilon_type = epsilon_type
+
+class Mur:
+    def __init__(self, mur_vals, mur_type="scalar"):
+        self.__mur_vals = mur_vals 
+        self.__mur_type = mur_type
+
+    @property
+    def mur_vals(self):
         return self.__murvals
 
-    @murvals.setter
-    def murvals(self, epsilonvals):
-        self.__murvals = murvals
+    @mur_vals.setter
+    def mur_vals(self, epsilonvals):
+        self.__murvals = mur_vals
+
+    @property
+    def mur_type(self):
+        return self.__mur_type
+
+    @mur_type.setter
+    def mur_type(self, mur_type):
+        self.__mur_type = mur_type
 
 class Material:
-    def __init__(self, name, omegas, epsilons):
-        self.name = name
+    def __init__(self, name, omega_list, epsilon_list, mur_list):
+        self.__name = name
+        self.__omega_list = omega_list
+        self.__epsilon_list = epsilon_list
+        self.__mur_list = mur_list
+
+        if len(self.__epsilon_list) == 0:
+            raise Exception("Zero vals in the epsilon list for the material \"{name}\"".format(name=self.__name))
+        if len(self.__mur_list) == 0:
+            raise Exception("Zero vals in the mur list for the material \"{name}\"".format(name=self.__name))
     
     @property
     def name(self):
-        return self.name
+        '''Get the name of the material
+
+        Args:
+            No
+
+        Returns:
+            Name (string)
+        '''
+        return self.__name
 
     @property
     def material_type(self):
-        return self.material_type
+        if len(self.__epsilon_list) == 0:
+            raise Exception("Zero vals in the epsilon list for the material \"{name}\"".format(name=self.__name))
+        if len(self.__mur_list) == 0:
+            raise Exception("Zero vals in the mur list for the material \"{name}\"".format(name=self.__name))
+
+        epsilon = self.__epsilon_list[0]
+        mur = self.__mur_list[0]
+        return epsilon.type, mur.type
 
     def get_epsilon_at_index(self, index):
-        pass
+        if index < 0:
+            raise Exception("Index: smaller than zero for the material \"{name}\"".format(name=self.__name))
+        if len(self.__epsilon_list) <= index:
+            raise Exception("Index: larger than the length of the epsilon list for the material \"{name}\"".format(name=self.__name))
+
+        return self.__epsilon_list[index].epsilon_vals
 
     @property
-    def omegas(self):
-        return self.omegas
+    def omega_list(self):
+        return self.__omega_list
 
     @omegas.setter
-    def omegas(self, omegas):
-        self.omegas = omegas
+    def omega_list(self, omega_list):
+        self.__omega_list = omega_list
 
     @property
-    def epsilons(self):
-        return self.epsilons
+    def epsilon_list(self):
+        return self.__epsilon_list
 
     @epsilons.setter
-    def epsilons(self, epsilons):
+    def epsilon_list(self, epsilon_list):
         # TODO Check before setting
-        self.epsilons = epsilons
-    
-class Pattern:
-    pass
+        self.__epsilon_list = epsilon_list
 
 class Layer:
     def __init__(self, name, material, thickness):
-        self.name = name 
-        self.material = material
-        self.thickness = thickness
+        self.__name = name 
+        self.__material = material
+        self.__thickness = thickness
+        self.__has_tensor = False
     
     @staticmethod
     def copy(name):
@@ -179,3 +223,46 @@ class Layer:
 
     def get_patterns_end(self):
 
+    def add_rectangle_pattern(self, material, args1, args2, angle):
+
+    def add_circle_pattern(self, material, args, radius):
+
+    def add_ellipse_pattern(self, material, args1, angle, args2):
+
+    def add_polygon_pattern(self, material, args1, angle, edge_points):
+
+    def add_grating_pattern(self, material, center, width):
+
+    def get_geometry_containment_relation(self):
+
+
+class Structure:
+    def __init__(self):
+
+    def __init__(self, structure):
+
+    def add_material(self, material):
+
+    def add_layer(self, layer):
+
+    def set_lattice(self, lattice):
+
+    def delete_layer_by_name(self, name):
+
+    def delete_layer_by_layer(self, layer):
+
+    def get_layer_by_index(self, index):
+
+    def get_layer_by_name(self, name):
+
+    def get_num_of_layer(self):
+
+    def get_thickness_list(self):
+
+    def get_layers_begin(self):
+
+    def get_layers_end(self):
+
+    def delete_layer(self, it):
+
+    def reorganize_layers(self):
