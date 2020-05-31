@@ -1,22 +1,11 @@
 import numpy as np 
 from enum import Enum
+import geometry as geom
 
 class Dimension_type(Enum):
     No = 0
     One = 1
     Two = 2
-
-class Pattern_type(Enum):
-    Grating = 0
-    Rectangle = 1
-    Circle = 2
-    Ellipse = 3
-    Polygon = 4
-
-class Material_type(Enum):
-    Scalar = 0
-    Diagonal = 1
-    Tensor = 2
 
 class Polarization_type(Enum):
     TE = 0
@@ -69,6 +58,9 @@ class Lattice:
 class Epsilon:
     def __init__(self, epsilon_vals, epsilon_type="scalar"):
         self.__epsilon_vals = np.array(epsilon_vals)
+
+        if epsilon_type not in ["scalar", "diagonal", "tensor"]:
+            raise Exception("Wrong epsilon type: [{epsilon_type}]".format(epsilon_type=epsilon_type)) 
         self.__epsilon_type = epsilon_type
 
     @property
@@ -90,6 +82,9 @@ class Epsilon:
 class Mur:
     def __init__(self, mur_vals, mur_type="scalar"):
         self.__mur_vals = mur_vals 
+
+        if mur_type not in ["scalar", "diagonal", "tensor"]:
+            raise Exception("Wrong mur type: [{mur_type}]".format(mur_type=mur_type)) 
         self.__mur_type = mur_type
 
     @property
@@ -168,70 +163,192 @@ class Material:
         # TODO Check before setting
         self.__epsilon_list = epsilon_list
 
+class Pattern:
+    def __init__(self, args1=[0,0], args2=[0,0], pattern_type="rectangle", area=0, edge_list=None, parent=-1, angle=0):
+        self.args1 = args1
+        self.args2 = args2
+        self.edge_list = edge_list
+
+        if pattern_type not in ["grating", "rectangle", "circle", "ellipse", "polygon"]:
+            raise Exception("Wrong pattern type: [{patter_type}]".format(pattern_type=pattern_type))
+        self.pattern_type = pattern_type
+
+        self.area = area
+        self.parent = parent
+        self.angle = angle
+
 class Layer:
-    def __init__(self, name, material, thickness):
+    def __init__(self, name, background_material, thickness):
         self.__name = name 
-        self.__material = material
         self.__thickness = thickness
         self.__has_tensor = False
+
+        self.__is_source = False
+        self.__background_material = background_material
+
+        self.__material_list = list()
+        self.__pattern_list = list()
     
     @staticmethod
     def copy(name):
+        # TODO copy material
         pass
 
     def set_background(self, material):
-        pass
-        
+        self.__background_material = material
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+
     def get_background(self):
-        pass
+        return self.__background_material
 
     def set_thickness(self, thickness):
-        pass
+        self.__thickness = thickness
 
     def get_thickness(self):
-        pass
+        return self.__thickness
 
-    def set_is_source(self):
-        pass
+    def set_is_source(self, status=True):
+        self.__is_source = status
 
     def check_is_source(self):
-        pass
+        return self.__is_source
 
-    def contain_tensor(self, status):
-        pass
+    def contain_tensor(self, status=False):
+        self.__has_tensor = status
 
     def has_tensor(self):
-        pass
+        return self.__has_tensor
 
     def has_material(self, material):
-        pass
+        if (self.__background_material == material):
+            return True
+        for material in self.__material
 
     def get_material_by_name(self, name):
-        pass
+        if len(self.__material_list) == 0:
+            raise Exception("Zero length for the material list for the layer \"{name}\"".format(name=self.__name))
+        for i in range(len(self.__material_list)):
+            material = self.__material_list[i]
+            if material.name == name:
+                return i
+        return None
 
     def get_num_of_material(self):
-        pass
+        return len(self.__material_list)
 
     def get_name(self):
-        pass
+        return self.__name
 
     def get_materials_begin(self):
+        pass
 
     def get_materials_end(self):
+        pass
+
+    def get_material_list(self):
+        return self.__material_list
 
     def get_patterns_begin(self):
+        pass
 
     def get_patterns_end(self):
+        pass
+
+    def get_pattern_list(self):
+        return self.__pattern_list
 
     def add_rectangle_pattern(self, material, args1, args2, angle):
+        '''
+            args1: the position of centers (x,y)
+            angle: the rotated angle with respect to x axis
+            args2: the widths in x and y directions
+        '''
+        self.__material_list.append(material)
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+        pattern = Pattern(
+            args1=args1, 
+            args2=args2,
+            angle=angle, 
+            type="rectangle",
+            area= geom.get_rectangle_area(args2)
+        )
+        self.__pattern_list.append(pattern)
 
     def add_circle_pattern(self, material, args, radius):
+        '''
+        args1: the position of centers (x,y)
+        radius: the radius of the circle
+        '''
+        self.__material_list.append(material)
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+        pattern = Pattern(
+            args1 = [args[0], radius],
+            args2 = [args[1], radius],
+            pattern_type="circle",
+            area = geom.get_circle_area(radius)
+        )
+        self.__pattern_list.append(pattern)
 
     def add_ellipse_pattern(self, material, args1, angle, args2):
+        '''
+        args1: the position of centers (x,y)
+        angle: the rotated angle with respect to x axis
+        args2: the halfwidths in x and y directions
+        '''
+        self.__material_list.append(Material)
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+        pattern = Pattern(
+            args1=args1,
+            args2=args2,
+            angle=angle,
+            pattern_type="ellipse",
+            area=geom.get_ellipse_area(args2)
+        )
+        self.__pattern_list.append(pattern)
 
     def add_polygon_pattern(self, material, args1, angle, edge_points):
+        '''
+        args1: the position of centers (x,y)
+        angle: the rotated angle with respect to x axis
+        edgePoints: the points of the vertices in counter clockwise order
+        '''
+        self.__material_list.append(material)
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+        pattern = Pattern(
+            args1=args1,
+            angle=angle,
+            pattern_type="polygon",
+            edge_points=edge_points,
+            area=geom.get_polygon_area(edge_list)
+        )
+        self.__pattern_list.append(pattern)
 
     def add_grating_pattern(self, material, center, width):
+        
+        self.__material_list.append(material)
+        epsilon_type, mur_type = material.material_type
+        if (epsilon_type == "tensor") or (mur_type == "tensor"):
+            self.__has_tensor = True
+        pattern = Pattern(
+            args1=[center, width],
+            args2=[0,0],
+            pattern_type="grating",
+            area=geom.get_grating_area(width)
+        )
+        self.__pattern_list.append(pattern)
+
+    def __is_contain_in_geometry(self, pattern1, pattern2):
+        
 
     def get_geometry_containment_relation(self):
 
