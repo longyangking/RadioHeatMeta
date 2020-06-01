@@ -348,7 +348,10 @@ class Layer:
         self.__pattern_list.append(pattern)
 
     def __is_contain_in_geometry(self, pattern1, pattern2):
+        center2 = np.zeros(2)
+        patten_type = pattern1.pattern_type
         
+
 
     def get_geometry_containment_relation(self):
 
