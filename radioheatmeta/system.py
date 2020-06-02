@@ -348,13 +348,64 @@ class Layer:
         self.__pattern_list.append(pattern)
 
     def __is_contain_in_geometry(self, pattern1, pattern2):
-        center2 = np.zeros(2)
-        patten_type = pattern1.pattern_type
-        
 
+        # define the center of the geometrical pattern
+        center2 = list()
+        pattern2_type = pattern2.patter_type
+        if pattern2_type == "grating":
+            center2 = [
+                pattern2.args1[0],
+                0
+            ]
+        elif pattern2_type == "rectangle":
+            center2 = pattern2.args1
+        elif pattern2_type == "circle":
+            center2 = pattern2.args1
+        elif pattern2_type == "ellipse":
+            center2 = pattern2.args1
+        elif pattern2_type == "polygon":
+            center2 = pattern2.args1
+
+        # define whether the pattern is contained respectively
+        pattern1_type = pattern1.pattern_type
+        if pattern1_type == "grating":
+            center1, width1 = pattern1.args1
+            return geom.is_contained_in_grating(center1, center2[0], width1)
+        elif pattern1_type == "rectangle":
+            center1 = pattern1.args1
+            width1 = pattern1.args2
+            return geom.is_contained_in_rectangle(center1, center2, width1)
+        elif pattern1_type == "circle":
+            center1 = [pattern1.args1[0], pattern1.args2[0]]
+            radius = pattern1.args1[1]
+            return geom.is_contained_in_circle(center1, center2, radius)
+        elif pattern1_type == "ellipse":
+            center1 = pattern1.args1
+            halfwidth1 = pattern1.args2
+            return geom.is_contained_in_ellipse(center1, center2, halfwidth1[0], halfwidth1[1])
+        elif pattern1_type == "polygon":
+            center1 = pattern.args1
+            return geom.is_contained_in_polygon(center1, center2, pattern1.edge_list)
+
+        return false
 
     def get_geometry_containment_relation(self):
+        area_vectors = list()
+        for i in range(len(self.__pattern_list)):
+            area_vectors.append([i, self.__pattern_list[i]])
 
+        area_vectors.sort(key=lambda  area_vector: area_vector[1])
+        area_vectors.reverse()
+
+        # Refresh the parent for each pattern based on the geometrical containment relations
+        for i in range(len(area_vectors)):
+            self.__pattern_list[area_vectors[i][0]].parent = -1
+            for j in range(i,len(area_vectors)):
+                pattern2 = self.__pattern_list[area_vectors[i][0]]
+                pattern1 = self.__pattern_list[area_vectors[j][0]]
+                if self.__is_contain_in_geometry(pattern1, pattern2):
+                    self.__pattern_list[area_vectors[i][0]].parent = area_vectors[j][0]
+                    break
 
 class Structure:
     def __init__(self):
