@@ -409,18 +409,42 @@ class Layer:
 
 class Structure:
     def __init__(self):
+        self.__layer_map = list()
+        self.__material_map = list()
+        self.__lattice = None
 
     def __init__(self, structure):
+        layer_map = structure.get_layer_map()
+        self.__layer_map = layer_map.copy()
 
     def add_material(self, material):
+        self.__material_map.append([material.name, material])
 
     def add_layer(self, layer):
+        index = len(self.__layer_map)
+        self.__layer_map.append([index, layer])
 
     def set_lattice(self, lattice):
+        self.__lattice = lattice
 
     def delete_layer_by_name(self, name):
+        index = None
+        for i in range(len(self.__layer_map)):
+            layer_name == self.__layer_map[i][0]
+            if layer_name == name:
+                index = i
+        if index is not None:
+            del self.__layer_map[index]
+            self.reorganize_layers()
+
+    def reorganize_layers(self):
+        layer_map = list()
+        for i in range(len(self.__layer_map)):
+            layer_map.append([i, self.__layer_map[i][1]])
+        self.__layer_map = layer_map
 
     def delete_layer_by_layer(self, layer):
+        self.delete_layer_by_name(layer.get_name())
 
     def get_layer_by_index(self, index):
 
@@ -430,10 +454,12 @@ class Structure:
 
     def get_thickness_list(self):
 
+    def get_layer_map(self):
+
     def get_layers_begin(self):
 
     def get_layers_end(self):
 
     def delete_layer(self, it):
 
-    def reorganize_layers(self):
+    
