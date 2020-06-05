@@ -447,19 +447,45 @@ class Structure:
         self.delete_layer_by_name(layer.get_name())
 
     def get_layer_by_index(self, index):
+        if index < 0:
+            raise Exception("Index: smaller than zero for the layer map")
+        if len(self.__layer_map) <= index:
+            return None
+            #raise Exception("Index: larger than the length of the layer map")
+        return self.__layer_map[index]    
 
     def get_layer_by_name(self, name):
+        for i in range(len(self.__layer_map)):
+            _, layer = self.__layer_map[i]
+            if layer.get_name() == name:
+                return i
+        return None
 
     def get_num_of_layer(self):
+        return len(self.__layer_map)
 
     def get_thickness_list(self):
+        thickness_list = list()
+        for layer_map in self.__layer_map:
+            _, layer = layer_map
+            thickness_list.append(layer.get_thickness())
+        return thickness_list
 
     def get_layer_map(self):
+        return self.__layer_map.copy()
 
     def get_layers_begin(self):
+        pass
 
     def get_layers_end(self):
+        pass
 
-    def delete_layer(self, it):
+    def delete_layer(self, index):
+        if index < 0:
+            raise Exception("Index: smaller than zero for the layer map")
+        if len(self.__layer_map) <= index:
+            raise Exception("Index: larger than the length of the layer map")
+        del self.__layer_map[index]   
+
 
     
