@@ -40,7 +40,40 @@ class Simulation:
     def add_material(self, name, infile):
 
     def add_material(self, name, omega_list, epsilon_list):
-        
+
+    def set_material(self, name, epsilon, mur, material_type):
+
+    def add_layer(self, name, thickness, material_name):
+
+    def set_layer(self, name, thickness, material_name):
+
+    def set_layer_thickness(self, name, thickness):
+
+    def add_layer_copy(self, name, original_name):
+
+    def delete_layer(self, name):
+
+    def set_source_layer(self, name):
+
+    def set_probe_layer(self, name):
+
+    def set_probe_layer_z_coordinate(self, target_z):
+
+    def set_num_of_G(self, num_G):
+
+    def get_phi(self):
+
+    def get_omega(self):
+
+    def get_epsilon(self, omege_index, position):
+
+    def output_layer_pattern_realization(self, omege_index, name, Nu, Nv, filename):
+
+    def get_num_of_omega(self):
+
+    def init_simulation(self):
+
+
         
 class SimulationPlanar(Simulation):
     pass
