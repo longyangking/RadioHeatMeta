@@ -1,4 +1,5 @@
 import numpy as np 
+import scipy as sp 
 
 def mesh_grid(vL, vR):
     qL, qR = np.meshgrid(vL, vR)
@@ -6,9 +7,9 @@ def mesh_grid(vL, vR):
 
 def get_S_matrices(start_layer, N, num_of_layer, M_matrices, F_matrices, S_matrices, direction):
     r1 =0
-    r2 = 2*N - 1
+    r2 = 2*N
     r3 = 3*N
-    r4 = 4*N - 1
+    r4 = 4*N
 
     if (direction == "all") or (direction == "down"):
         for i in range(start_layer,0,-1):
@@ -24,7 +25,10 @@ def get_S_matrices(start_layer, N, num_of_layer, M_matrices, F_matrices, S_matri
                 F_matrices[i]
             ).dot(S_matrices[i][r1:r2, r1:r2])
 
-            
+            test = left_top - F_matrices[i].dot(S_matrices[i][r1:r2, r3:r4].dot(left_bottom))
+
+            S_matrices[i-1]
+
 
 def sinc(x):
     if np.isscalar(x):
@@ -42,9 +46,67 @@ def sinc(x):
         return result
 
 def jinc(x):
+    if x == 0.0:
+        return 0.5
+    return sp.special.j1(x)/x
 
-def get_grand_imaginary_matrices(grand_imaginary_matrices, im_eps_xx, im_eps_xy, im_eps_yx, im_eps_yy, im_eps_zz, num_of_layer, N):
+def get_grand_imaginary_matrices(im_eps_xx, im_eps_xy, im_eps_yx, im_eps_yy, im_eps_zz, num_of_layer, N):
+    grand_imaginary_matrices = np.zeros((num_of_layer, 3*N, 3*N),dtype=complex)
+    for i in range(num_of_layer):
+        grand_imaginary_matrix = np.zeros((3*N, 3*N), dtype=complex)
+        grand_imaginary_matrix[0:N, 0:N] = im_eps_xx[i]
+        grand_imaginary_matrix[0:N, N:2*N] = im_eps_xy[i]
+        grand_imaginary_matrix[N:2*N, 0:N] = im_eps_yx[i]
+        grand_imaginary_matrix[N:2*N, N:2*N] = im_eps_yy[i]
+        grand_imaginary_matrix[2*N:3*N, 2*N:3*N] = im_eps_zz[i]
+        grand_imaginary_matrices[i] = grand_imaginary_matrix
+    return grand_imaginary_matrices
 
-def get_E_matrices(E_matrices, eps_xx, eps_xy, eps_yx, eps_yy, num_of_layer, N):
+def get_E_matrices(eps_xx, eps_xy, eps_yx, eps_yy, num_of_layer, N):
+    E_matrices = np.zeros((num_of_layer, 2*N, 2*N))
+    for i in range(num_of_layer):
+        E_matrix = np.concatenate((
+            np.concatenate((eps_yy[i], -eps_yx[i]), axis=1),
+            np.concatenate((-eps_xy[i], eps_xx[i]), axis=1)
+        ), axis=0)
+        E_matrices[i] = E_matrix
+    return E_matrices
 
 def poynting_flux(omega, thickness_list, kx, ky, E_matrices, grand_imaginary_matrices, eps_zz_inv, Gx_mat, Gy_mat, source_list, target_layer, N, polar, z):
+    kx = kx*omega
+    ky = ky*omega
+    r1 = 0
+    r2 = 2*N-1
+    r3 = 2*N
+    r4 = 4*N-1
+    one_padding_4N = np.diag(np.ones(4*N), dtype=complex)
+    one_padding_2N = np.diag(np.ones(2*N), dtype=complex)
+    one_padding_1N = np.diag(np.ones(N), dtype=complex)
+    zero_padding_2N = np.zeros((2*N, 2*N), dtype=complex)
+    zero_padding_4N = np.zeros((4*N, 4*N), dtype=complex)
+    num_of_layer = len(thickness_list)
+
+    kx_mat = np.diag(kx + Gx_mat)
+    ky_mat = np.diag(ky + Gy_mat)
+
+    T_matrices = list()
+    M_matrices = list()
+    Eigen_val_matrices = list()
+    Eigen_vec_matrices = list()
+    F_matrices = list()
+    coeff_of_A = one_padding_2N
+    coeff_of_B = one_padding_2N
+
+    k_matrix = np.concatenate(
+        (
+         np.concatenate((kx_mat.dot(kx_mat), kx_mat.dot(ky_mat)), axis=1),
+         np.concatenate((ky_mat.dot(kx_mat), ky_mat.dot(ky_mat)), axis=1)   
+        ),
+        axis=0
+    )
+
+    for i in range(num_of_layer):
+        vertical_align = np.concatenate((ky_mat, -kx_mat), axis=0)
+        horizontal_align = np.concatenate((ky_mat, kx_mat), axis=1)
+
+        
