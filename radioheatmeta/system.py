@@ -152,7 +152,7 @@ class Material:
 
         epsilon = self.__epsilon_list[0]
         mur = self.__mur_list[0]
-        return epsilon.type, mur.type
+        return epsilon.epsilon_type, mur.mur_type
 
     def get_epsilon_at_index(self, index):
         if index < 0:
