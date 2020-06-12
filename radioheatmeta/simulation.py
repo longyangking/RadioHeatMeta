@@ -1,4 +1,28 @@
-import numpy as np 
+import numpy as np
+import system
+import rcwa
+from fileloader import FileLoader
+
+class Options:
+    def __init__(self):
+        self.__FMM_rule = "maivfmm"
+        self.__integral_method = "gausskronrod"
+        self.__polarization = "both"
+        self.__print_intermediate = False
+        self.__output_flat = ""
+        self.__integral_K_parallel = True
+        self.__kx_integral_preset = False
+        self.__ky_integral_preset = False
+        self.__truncation = "circular"
+
+    @property
+    def FMM_rule(self):
+        return self.__FMM_rule
+    
+    @FMM_rule.setter
+    def FMM_rule(self, rule):
+        if rule not in ["maivfmm", "spatialadapative"]:
+            raise Exception("unknown FMM rule! only support 2 kinds of rules: maivfmm and spatialadapative")
 
 class Simulation:
     def __init__(self, verbose=False):
@@ -21,7 +45,7 @@ class Simulation:
         self.__prefactor = 0 
         
         self.__layer_map = None
-        self.__material_map = None
+        self.__material_map = None # the list of [name, material class]
         self.__structure = None
     
         self.__target_layer = 0
@@ -37,7 +61,29 @@ class Simulation:
         self.__dimension = "no"
         self.__options = None
 
+        self.__num_of_thread = 1
+        self.__current_omega_index = -1
+
+        self.verbose = verbose
+
     def add_material(self, name, infile):
+        num_of_material = len(self.__material_map)
+        for i in range(num_of_material):
+            if self.__material_map[i][0] == name:
+                raise Exception("{name}: material already exist!".format(name=name))
+
+        fileloader = FileLoader()
+        material = system.Material(name=name,
+            omega_list=fileloader.get_omega_list(),
+            epsilon_list=fileloader.get_epsilon_list(),
+            mur_list=fileloader.get_mur_list()
+        )
+        if self.verbose:
+            print("import material:[{name}] into the simulation".format(name=name))
+
+        self.__material_map.append([name, material])
+        self.__structure.add_material(material)
+
 
     def add_material(self, name, omega_list, epsilon_list):
 
@@ -68,16 +114,70 @@ class Simulation:
 
     def get_omega(self):
         if self.__omega_list is None:
-            raise Exception("Omega list is None!")
+            raise Exception("Omega list is None in the simulation!")
         return self.__omega_list
 
     def get_epsilon(self, omege_index, position):
+        MICRON = 1e6 # micro meter unit
+        position = MICRON*position # convert the SI unit (m) into the micro meter (um)
+        if omege_index < 0:
+            raise Exception("Omega index is smaller than zero!")
+        if omege_index >= len(self.__omega_list) is None:
+            raise Exception("Omega index of of range!")
+
+        # initiate the RCWA for the given omega
+        if omege_index != self.__current_omega_index:
+            self.__current_omega_index = omege_index
+            self.__build_RCWA_matrices()
+
+        layer_index = 0
+        offset = 0
+        num_of_layer = self.__structure.get_num_of_layer()
+        for i in range(num_of_layer):
+            if (position[2] > offset) and (position[2] <= offset + self.__thickness_list[i]):
+                layer_index = i
+                break
+            offset += self.__thickness_list[i]
+
+        # only one layer exist
+        if (layer_index == 0) and (position[2] > offset):
+            layer_index = num_of_layer - 1
+
+        Gx_r, Gx_l = rcwa.mesh_grid(self.__Gx_mat, self.__Gx_mat)
+        Gy_r, Gy_l = rcwa.mesh_grid(self.__Gy_mat, self.__Gy_mat)
+
+        Gx_mat = Gx_l - Gx_r
+        Gy_mat = Gy_l - Gy_r
+        r1, r2, r3, r4 = 0, self.__num_G, self.__num_G, 2*self.__num_G
+        pos = (self.__num_G - 1)/2
+        if (self.__options.truncation == "circular") and (self.__dimension == "two"):
+            pos = 0
+        
+        # TODO need to think carefully
+
 
     def output_layer_pattern_realization(self, omege_index, name, Nu, Nv, filename):
+        if (Nu <= 0) or (Nv <= 0):
+            raise Exception("Number of point needs to be positive!")
+
+        dx = self.__lattice.bx[0]
+        if (Nu > 1):
+            dx = dx/(Nu - 1)
+
+        dy = np.hypot(self.__lattice.by[0], self.__lattice.by[1])
+        if (Nv > 1):
+            dy = dy/(Nv - 1)
+
+        position = np.zeros(3)
+        epsilon = np.zeros(9, dtype=complex)
+
+        # TODO Get pattern and output to the file
 
     def get_num_of_omega(self):
+        return len(self.__omega_list)
 
     def init_simulation(self):
+
 
     def get_phi_at_kx_ky(self, omega_index, kx, ky=0):
 
@@ -111,13 +211,13 @@ class Simulation:
 
     def __integrate_kx_ky_internal(self, start, end, parallel=False, rank=0):
 
-    def build_RCWA_matrices(self):
+    def __build_RCWA_matrices(self):
 
-    def reset_simulation(self):
+    def __reset_simulation(self):
 
-    def set_target_layer_by_layer(self, layer):
+    def __set_target_layer_by_layer(self, layer):
 
-    def get_structure(self):
+    def __get_structure(self):
 
         
 class SimulationPlanar(Simulation):
