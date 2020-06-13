@@ -9,7 +9,7 @@ class Options:
         self.__integral_method = "gausskronrod"
         self.__polarization = "both"
         self.__print_intermediate = False
-        self.__output_flat = ""
+        self.__output_flag = ""
         self.__integral_K_parallel = True
         self.__kx_integral_preset = False
         self.__ky_integral_preset = False
@@ -23,6 +23,77 @@ class Options:
     def FMM_rule(self, rule):
         if rule not in ["maivfmm", "spatialadapative"]:
             raise Exception("unknown FMM rule! only support 2 kinds of rules: maivfmm and spatialadapative")
+        self.__FMM_rule = rule
+
+    @property
+    def integral_method(self):
+        return self.__integral_method
+
+    @integral_method.setter
+    def integral_method(self, method):
+        if method not in ["gausskronrod", "gausslegendre"]:
+            raise Exception("unknown integral method! only support 2 kinds of methods: gausskronrod and gausslegendre")
+        self.__integral_method = method
+
+    @property
+    def polarization(self):
+        return self.__polarization
+
+    @polarization.setter
+    def polarization(self, polarization):
+        if polarization not in ["te", "tm", "both"]:
+            raise Exception("unknown polarization! only support 3 kinds of polarizations: te, tm or both")
+        self.__polarization = polarization
+
+    @property
+    def output_flag(self):
+        return self.__output_flag
+
+    @output_flag.setter
+    def output_flag(self, flag):
+        self.__output_flag = flag
+
+    @property
+    def print_intermediate(self):
+        return self.__print_intermediate
+
+    @print_intermediate.setter
+    def print_intermediate(self, status):
+        self.__print_intermediate = status
+
+    @property
+    def integral_K_parallel(self):
+        return self.__integral_K_parallel
+    
+    @integral_K_parallel.setter
+    def integral_K_parallel(self, status):
+        self.__integral_K_parallel = status
+
+    @property
+    def kx_integral_preset(self):
+        return self.__kx_integral_preset
+
+    @kx_integral_preset.setter
+    def kx_integral_preset(self, status):
+        self.__kx_integral_preset = status
+
+    @property
+    def ky_integral_preset(self):
+        return self.__ky_integral_preset
+
+    @ky_integral_preset.setter
+    def ky_integral_preset(self, status):
+        self.__ky_integral_preset = status
+
+    @property
+    def truncation(self):
+        return self.__truncation
+
+    @truncation.setter
+    def truncation(self, truncation):
+        if truncation not in ["circular", "parallelogramic"]:
+            raise Exception("unknown truncation! only support 3 kinds of truncations: circular and parallelogramic")
+        self.__truncation = truncation
 
 class Simulation:
     def __init__(self, verbose=False):
