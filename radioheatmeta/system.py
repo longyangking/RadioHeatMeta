@@ -18,19 +18,19 @@ import numpy as np
 from enum import Enum
 import geometry as geom
 
-class Dimension_type(Enum):
-    No = 0
-    One = 1
-    Two = 2
+# class Dimension_type(Enum):
+#     No = 0
+#     One = 1
+#     Two = 2
 
-class Polarization_type(Enum):
-    TE = 0
-    TM = 1
-    Both = 2
+# class Polarization_type(Enum):
+#     TE = 0
+#     TM = 1
+#     Both = 2
 
-class Truncation_type(Enum):
-    Circular = 0
-    Parallelogramic = 1
+# class Truncation_type(Enum):
+#     Circular = 0
+#     Parallelogramic = 1
 
 class Lattice:
     def __init__(self, bx=[0,0], by=[0,0], angle=90, area=0):
