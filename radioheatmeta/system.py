@@ -16,7 +16,7 @@
 
 import numpy as np 
 from enum import Enum
-import geometry as geom
+import radioheatmeta.geometry as geom
 
 # class Dimension_type(Enum):
 #     No = 0
@@ -83,7 +83,7 @@ class Epsilon:
     def epsilon_vals(self):
         return self.__epsilon_vals
 
-    @epsilonvals.setter
+    @epsilon_vals.setter
     def epsilon_vals(self, epsilon_vals):
         self.__epsilon_vals = epsilon_vals
 
@@ -166,7 +166,7 @@ class Material:
     def omega_list(self):
         return self.__omega_list
 
-    @omegas.setter
+    @omega_list.setter
     def omega_list(self, omega_list):
         self.__omega_list = omega_list
 
@@ -174,7 +174,7 @@ class Material:
     def epsilon_list(self):
         return self.__epsilon_list
 
-    @epsilons.setter
+    @epsilon_list.setter
     def epsilon_list(self, epsilon_list):
         # TODO Check before setting
         self.__epsilon_list = epsilon_list
@@ -240,7 +240,9 @@ class Layer:
     def has_material(self, material):
         if (self.__background_material == material):
             return True
-        for material in self.__material
+        for material in self.__material:
+            pass 
+            # TODO
 
     def get_material_by_name(self, name):
         if len(self.__material_list) == 0:
