@@ -1,5 +1,54 @@
+#  Copyright (C) 2020 Yang Long (longyang_123@yeah.net)
+# 
+#  RadioHeatMeta is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  RadioHeatMeta is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import numpy as np 
 import scipy as sp 
+
+def sinc(x):
+    if np.isscalar(x):
+        if x == 0:
+            return 1
+        else:
+            return np.sin(x)/x
+    else:
+        sin_x = np.sin(x)
+        x = np.array(x)
+        positions = np.where(x==0)
+        x[positions] = 1
+        result = sin_x / x
+        result[positions] = 1
+        return result
+
+def jinc(x):
+    if x == 0.0:
+        return 0.5
+    return sp.special.j1(x)/x
+
+class RCWA:
+    def __init__(self, structure):
+
+    def __get_S_matrices(self):
+
+    def __get_grand_imagnary_matrices(self):
+
+    def __get_E_matrices(self):
+
+    def get_poynting_flux(self, omega):
+
+        return flux
 
 def mesh_grid(vL, vR):
     qL, qR = np.meshgrid(vL, vR)
@@ -29,28 +78,10 @@ def get_S_matrices(start_layer, N, num_of_layer, M_matrices, F_matrices, S_matri
 
             S_matrices[i-1]
 
-
-def sinc(x):
-    if np.isscalar(x):
-        if x == 0:
-            return 1
-        else:
-            return np.sin(x)/x
-    else:
-        sin_x = np.sin(x)
-        x = np.array(x)
-        positions = np.where(x==0)
-        x[positions] = 1
-        result = sin_x / x
-        result[positions] = 1
-        return result
-
-def jinc(x):
-    if x == 0.0:
-        return 0.5
-    return sp.special.j1(x)/x
-
 def get_grand_imaginary_matrices(im_eps_xx, im_eps_xy, im_eps_yx, im_eps_yy, im_eps_zz, num_of_layer, N):
+    '''
+    Get the imaginary part of optical parameters 
+    '''
     grand_imaginary_matrices = np.zeros((num_of_layer, 3*N, 3*N),dtype=complex)
     for i in range(num_of_layer):
         grand_imaginary_matrix = np.zeros((3*N, 3*N), dtype=complex)
@@ -63,6 +94,9 @@ def get_grand_imaginary_matrices(im_eps_xx, im_eps_xy, im_eps_yx, im_eps_yy, im_
     return grand_imaginary_matrices
 
 def get_E_matrices(eps_xx, eps_xy, eps_yx, eps_yy, num_of_layer, N):
+    '''
+    Get Epsilon Matrices based on the reciprocal lattice matrices
+    '''
     E_matrices = np.zeros((num_of_layer, 2*N, 2*N))
     for i in range(num_of_layer):
         E_matrix = np.concatenate((
