@@ -29,11 +29,11 @@ class Pattern:
     '''
     Define the geometrical pattern 
     '''
-    def __init__(self, pattern_type="rectangle",  parent=-1):
+    def __init__(self, area, pattern_type="rectangle",  parent=-1):
         if pattern_type not in ["grating", "rectangle", "circle", "ellipse", "polygon"]:
             raise Exception("Wrong pattern type: [{patter_type}]".format(pattern_type=pattern_type))
         self.__pattern_type = pattern_type
-
+        self.area = area
         self.__parent = parent
 
     def get_pattern_type(self):
@@ -42,33 +42,33 @@ class Pattern:
     def get_parent(self):
         return self.__parent
 
-    def set_parent(self):
+    def set_parent(self, parent):
         self.__parent = parent
 
 class RectanglePatten(Pattern):
-    def __init__(self, position, angle, widths):
-        super().__init__(patter_type="rectangle")
+    def __init__(self, position, angle, widths, area):
+        super().__init__(patter_type="rectangle", area=area)
         self.position = position
         self.angle = angle
         self.widths = widths
 
 class EllipsePattern(Pattern):
-    def __init__(self, position, angle, halfwidths):
-        super().__init__(patter_type="ellipse")
+    def __init__(self, position, angle, halfwidths, area):
+        super().__init__(patter_type="ellipse", area=area)
         self.position = position
         self.angle = angle
         self.halfwidths = halfwidths
 
 class PolygonPattern(Pattern):
-    def __init__(self, position, angle, edgepoints):
-        super().__init__(pattern_type="polygon")
+    def __init__(self, position, angle, edge_list, area):
+        super().__init__(pattern_type="polygon", area=area)
         self.position = position
         self.angle = angle
-        self.edgepoints = edgepoints
+        self.edge_list = edge_list
 
 class CirclePattern(Pattern):
-    def __init__(self, position, angle):
-        super().__init__(pattern_type="circle")
+    def __init__(self, position, angle, area):
+        super().__init__(pattern_type="circle", area=area)
         self.position = position
         self.angle = angle
 
@@ -76,8 +76,8 @@ class GratingPattern(Pattern):
     '''
     Quasi 1D structure
     '''
-    def __init__(self, center, width):
-        super().__init__(pattern_type="grating")
+    def __init__(self, center, width, area):
+        super().__init__(pattern_type="grating", area=area)
         self.center = center
         self.width = width
 
@@ -85,25 +85,34 @@ class Layer:
     '''
     Define the information of each layer
     '''
-    def __init__(self, name, background_material, thickness):
+    def __init__(self, 
+        name, thickness, background_material,
+        is_source=False, verbose=False
+    ):
         self.__name = name 
         self.__thickness = thickness
         self.__has_tensor = False
 
-        self.__is_source = False
+        self.__is_source = is_source
         self.__background_material = background_material
 
         self.__material_list = list()
         self.__pattern_list = list()
+
+        self.verbose = verbose
     
     @staticmethod
     def copy(name):
         # TODO copy material
         pass
 
+    @property
+    def name(self):
+        return self.__name
+
     def set_background(self, material):
         self.__background_material = material
-        epsilon_type, mu_type = material.material_type
+        epsilon_type, mu_type = material.get_material_type()
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
 
@@ -122,122 +131,87 @@ class Layer:
     def check_is_source(self):
         return self.__is_source
 
-    def contain_tensor(self, status=False):
-        self.__has_tensor = status
+    def contain_tensor(self, status=True):
+        if not self.__has_tensor:
+            self.__has_tensor = status
 
     def has_tensor(self):
         return self.__has_tensor
 
     def has_material(self, material):
-        if (self.__background_material == material):
+        if (self.__background_material.name  == material.name):
             return True
-        for material in self.__material:
-            pass 
-            # TODO
-
+        for imaterial in self.__material_list:
+            if imaterial.name == material.name:
+                return True
+            
     def get_material_by_name(self, name):
         if len(self.__material_list) == 0:
             raise Exception("Zero length for the material list for the layer \"{name}\"".format(name=self.__name))
-        for i in range(len(self.__material_list)):
-            material = self.__material_list[i]
+        for material in self.__material_list:
             if material.name == name:
-                return i
+                return material
         return None
 
     def get_num_of_material(self):
         return len(self.__material_list)
 
-    def get_name(self):
-        return self.__name
-
-    def get_materials_begin(self):
-        pass
-
-    def get_materials_end(self):
-        pass
-
     def get_material_list(self):
         return self.__material_list
-
-    def get_patterns_begin(self):
-        pass
-
-    def get_patterns_end(self):
-        pass
 
     def get_pattern_list(self):
         return self.__pattern_list
 
-    def add_rectangle_pattern(self, material, args1, args2, angle):
-        '''
-            args1: the position of centers (x,y)
-            angle: the rotated angle with respect to x axis
-            args2: the widths in x and y directions
-        '''
+    def add_rectangle_pattern(self, material, position, angle, widths):
         self.__material_list.append(material)
         epsilon_type, mu_type = material.material_type
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
-        pattern = Pattern(
-            args1=args1, 
-            args2=args2,
-            angle=angle, 
-            type="rectangle",
+        pattern = RectanglePatten(
+            position=position,
+            angle=angle,
+            widths=widths,
             area= geometry.get_rectangle_area(args2)
         )
         self.__pattern_list.append(pattern)
 
-    def add_circle_pattern(self, material, args, radius):
-        '''
-        args1: the position of centers (x,y)
-        radius: the radius of the circle
-        '''
+    def add_circle_pattern(self, material, position, radius):
         self.__material_list.append(material)
         epsilon_type, mu_type = material.material_type
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
-        pattern = Pattern(
-            args1 = [args[0], radius],
-            args2 = [args[1], radius],
-            pattern_type="circle",
+        pattern = CirclePattern(
+            position=position,
+            radius=radius,
             area = geometry.get_circle_area(radius)
         )
         self.__pattern_list.append(pattern)
 
-    def add_ellipse_pattern(self, material, args1, angle, args2):
-        '''
-        args1: the position of centers (x,y)
-        angle: the rotated angle with respect to x axis
-        args2: the halfwidths in x and y directions
-        '''
+    def add_ellipse_pattern(self, material, position, angle, halfwidths):
         self.__material_list.append(Material)
         epsilon_type, mu_type = material.material_type
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
-        pattern = Pattern(
-            args1=args1,
-            args2=args2,
+        pattern = EllipsePattern(
+            position=position,
             angle=angle,
-            pattern_type="ellipse",
+            halfwidths=halfwidths
             area=geometry.get_ellipse_area(args2)
         )
         self.__pattern_list.append(pattern)
 
-    def add_polygon_pattern(self, material, args1, angle, edge_points):
-        '''
-        args1: the position of centers (x,y)
-        angle: the rotated angle with respect to x axis
-        edgePoints: the points of the vertices in counter clockwise order
-        '''
+    def add_polygon_pattern(self, material, position, angle, edgepoints):
         self.__material_list.append(material)
         epsilon_type, mu_type = material.material_type
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
-        pattern = Pattern(
-            args1=args1,
+
+        edge_list = np.array([point for point in edgepoints])
+
+        pattern = PolygonPattern(
+            position=position,
             angle=angle,
-            pattern_type="polygon",
-            edge_points=edge_points,
+            edge_list=edge_list,
             area=geometry.get_polygon_area(edge_list)
         )
         self.__pattern_list.append(pattern)
@@ -248,77 +222,89 @@ class Layer:
         epsilon_type, mu_type = material.material_type
         if (epsilon_type == "tensor") or (mu_type == "tensor"):
             self.__has_tensor = True
-        pattern = Pattern(
-            args1=[center, width],
-            args2=[0,0],
-            pattern_type="grating",
+        pattern = GratingPattern(
+            center=center,
+            width=width,
             area=geometry.get_grating_area(width)
         )
         self.__pattern_list.append(pattern)
 
     def __is_contain_in_geometry(self, pattern1, pattern2):
-
         # define the center of the geometrical pattern
-        center2 = list()
+        position2 = np.zeros(2)
         pattern2_type = pattern2.patter_type
         if pattern2_type == "grating":
-            center2 = [
-                pattern2.args1[0],
-                0
-            ]
-        elif pattern2_type == "rectangle":
-            center2 = pattern2.args1
-        elif pattern2_type == "circle":
-            center2 = pattern2.args1
-        elif pattern2_type == "ellipse":
-            center2 = pattern2.args1
-        elif pattern2_type == "polygon":
-            center2 = pattern2.args1
+            # Quasi 1D for grating
+            position2 = np.array([pattern2.center, 0])
+        else:
+            position2 = np.array(pattern2.position)
 
         # define whether the pattern is contained respectively
         pattern1_type = pattern1.pattern_type
         if pattern1_type == "grating":
-            center1, width1 = pattern1.args1
-            return geometry.is_contained_in_grating(center1, center2[0], width1)
+            center = pattern1.center
+            width = pattern1.width
+            return geometry.is_contained_in_grating(center, position2[0], width)
         elif pattern1_type == "rectangle":
-            center1 = pattern1.args1
-            width1 = pattern1.args2
-            return geometry.is_contained_in_rectangle(center1, center2, width1)
+            position = pattern1.position
+            widths = pattern1.widths
+            return geometry.is_contained_in_rectangle(position, position2, widths)
         elif pattern1_type == "circle":
-            center1 = [pattern1.args1[0], pattern1.args2[0]]
-            radius = pattern1.args1[1]
-            return geometry.is_contained_in_circle(center1, center2, radius)
+            position = pattern1.position
+            radius = pattern1.radius
+            return geometry.is_contained_in_circle(position, position2, radius)
         elif pattern1_type == "ellipse":
-            center1 = pattern1.args1
-            halfwidth1 = pattern1.args2
-            return geometry.is_contained_in_ellipse(center1, center2, halfwidth1[0], halfwidth1[1])
+            position = pattern1.position
+            halfwidths = pattern1.halfwidths
+            return geometry.is_contained_in_ellipse(position, position2, halfwidths[0], halfwidths[1])
         elif pattern1_type == "polygon":
-            center1 = pattern.args1
-            return geometry.is_contained_in_polygon(center1, center2, pattern1.edge_list)
+            position = pattern1.position
+            edge_list = pattern1.edge_list
+            return geometry.is_contained_in_polygon(position, position2, edge_list)
 
-        return false
+        return False
 
     def get_geometry_containment_relation(self):
-        area_vectors = list()
-        for i in range(len(self.__pattern_list)):
-            area_vectors.append([i, self.__pattern_list[i]])
+        '''
+        Obtain the containment relation between geometrical patterns
+        '''
+        if self.verbose:
+            print("Starting to get geometry containment relation for the layer [{name}]".format(name=self.__name))
 
-        area_vectors.sort(key=lambda  area_vector: area_vector[1])
-        area_vectors.reverse()
+        area_list = np.array([pattern.area for pattern in self.__pattern_list])
+        indexs = np.argsort(area_list)
 
         # Refresh the parent for each pattern based on the geometrical containment relations
-        for i in range(len(area_vectors)):
-            self.__pattern_list[area_vectors[i][0]].parent = -1
+        for i in range(len(area_list)):
+            self.__pattern_list[indexs[i]].parent = -1
             for j in range(i,len(area_vectors)):
-                pattern2 = self.__pattern_list[area_vectors[i][0]]
-                pattern1 = self.__pattern_list[area_vectors[j][0]]
+                pattern2 = self.__pattern_list[indexs[i]]
+                pattern1 = self.__pattern_list[indexs[j]]
                 if self.__is_contain_in_geometry(pattern1, pattern2):
-                    self.__pattern_list[area_vectors[i][0]].parent = area_vectors[j][0]
+                    self.__pattern_list[indexs[i]].parent = indexs[j]
                     break
+        
+        if self.verbose:
+            print("End of the computations of the geometry containment relation for the layer [{name}]".format(
+                name=self.__name
+            ))
+
+    def get_epsilon_matrix(self, Gx, Gy):
+        '''
+        Get the Fourier transformation of the epsilon of the layer
+        '''
+
+    def get_mu_matrix(self, Gx, Gy):
+        '''
+        Get the Fourier transformation of the mu of the layer
+        '''
+        
 
     def __transform_grating_element(G, width):
+        # TODO
 
     def __transform_grating(epsilon, epsilon_bg, Gx, center, width, area, has_tensor):
+        # TODO
 
     def __transform_rectangle_element(Gx, Gy, width_x, width_y):
 
@@ -336,89 +322,83 @@ class Layer:
 
     def __transform_polygon(epsilon, epsilon_bg, Gx, Gy, centers, angle, edge_list, area, has_tensor):
 
-
 class Structure:
     '''
     Define the whole multilayer structure composed of layers
     '''
-    def __init__(self):
-        self.__layer_map = list()
-        self.__material_map = list()
-        self.__lattice = None
+    def __init__(self, lattice, material_list, layer_list, verbose=False):
+        self.__layer_list = layer_list
+        self.__material_list = material_list
+        self.__lattice = lattice
 
     def __init__(self, structure):
-        layer_map = structure.get_layer_map()
-        self.__layer_map = layer_map.copy()
+        layer_list = structure.get_layer_list()
+        material_list = structure.get_material_list()
+        lattice = structure.get_lattice()
+        self.__layer_list = layer_list.copy()
+        self.__material_list = material_list.copy()
+        self.__lattice = lattice
+
+    def get_lattice(self):
+        return self.__lattice
 
     def add_material(self, material):
-        self.__material_map.append([material.name, material])
+        self.__material_list.append(material)
+
+    def get_material_list(self):
+        return self.__material_list
 
     def add_layer(self, layer):
-        index = len(self.__layer_map)
-        self.__layer_map.append([index, layer])
+        self.__layer_list.append(layer)
 
     def set_lattice(self, lattice):
         self.__lattice = lattice
 
     def delete_layer_by_name(self, name):
         index = None
-        for i in range(len(self.__layer_map)):
-            layer_name == self.__layer_map[i][0]
-            if layer_name == name:
+        for i in range(len(self.__layer_list)):
+            layer = self.__layer_list[i]
+            if layer.name == name:
                 index = i
+                break
         if index is not None:
-            del self.__layer_map[index]
-            self.reorganize_layers()
-
-    def reorganize_layers(self):
-        layer_map = list()
-        for i in range(len(self.__layer_map)):
-            layer_map.append([i, self.__layer_map[i][1]])
-        self.__layer_map = layer_map
+            del self.__layer_list[index]
 
     def delete_layer_by_layer(self, layer):
-        self.delete_layer_by_name(layer.get_name())
+        self.delete_layer_by_name(layer.name)
 
     def get_layer_by_index(self, index):
         if index < 0:
-            raise Exception("Index: smaller than zero for the layer map")
-        if len(self.__layer_map) <= index:
-            return None
-            #raise Exception("Index: larger than the length of the layer map")
-        return self.__layer_map[index]    
+            raise Exception("Index: smaller than zero for the layer list")
+        if len(self.__layer_list) <= index:
+            #return None
+            raise Exception("Index: larger than the length of the layer list")
+        return self.__layer_list[index]    
 
     def get_layer_by_name(self, name):
-        for i in range(len(self.__layer_map)):
-            _, layer = self.__layer_map[i]
-            if layer.get_name() == name:
-                return i
+        for layer in self.__layer_list:
+            if layer.name == name:
+                return layer
         return None
 
     def get_num_of_layer(self):
-        return len(self.__layer_map)
+        return len(self.__layer_list)
 
     def get_thickness_list(self):
         thickness_list = list()
-        for layer_map in self.__layer_map:
-            _, layer = layer_map
+        for layer in self.__layer_list:
             thickness_list.append(layer.get_thickness())
         return thickness_list
 
-    def get_layer_map(self):
-        return self.__layer_map.copy()
+    def get_layer_list(self):
+        return self.__layer_list.copy()
 
-    def get_layers_begin(self):
-        pass
-
-    def get_layers_end(self):
-        pass
-
-    def delete_layer(self, index):
+    def delete_layer_by_index(self, index):
         if index < 0:
             raise Exception("Index: smaller than zero for the layer map")
-        if len(self.__layer_map) <= index:
+        if len(self.__layer_list) <= index:
             raise Exception("Index: larger than the length of the layer map")
-        del self.__layer_map[index]   
+        del self.__layer_list[index]   
 
 
     
