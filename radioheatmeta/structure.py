@@ -17,36 +17,74 @@
 import numpy as np 
 from enum import Enum
 import radioheatmeta.geometry as geometry
-
-# class Dimension_type(Enum):
-#     No = 0
-#     One = 1
-#     Two = 2
+from radioheatmeta.lattice import Lattice
+from radioheatmeta.material import Epsilon, Mu, Material
 
 # class Polarization_type(Enum):
 #     TE = 0
 #     TM = 1
 #     Both = 2
 
-# class Truncation_type(Enum):
-#     Circular = 0
-#     Parallelogramic = 1
-
 class Pattern:
-    def __init__(self, args1=[0,0], args2=[0,0], pattern_type="rectangle", area=0, edge_list=None, parent=-1, angle=0):
-        self.args1 = args1
-        self.args2 = args2
-        self.edge_list = edge_list
-
+    '''
+    Define the geometrical pattern 
+    '''
+    def __init__(self, pattern_type="rectangle",  parent=-1):
         if pattern_type not in ["grating", "rectangle", "circle", "ellipse", "polygon"]:
             raise Exception("Wrong pattern type: [{patter_type}]".format(pattern_type=pattern_type))
-        self.pattern_type = pattern_type
+        self.__pattern_type = pattern_type
 
-        self.area = area
-        self.parent = parent
+        self.__parent = parent
+
+    def get_pattern_type(self):
+        return self.__pattern_type
+
+    def get_parent(self):
+        return self.__parent
+
+    def set_parent(self):
+        self.__parent = parent
+
+class RectanglePatten(Pattern):
+    def __init__(self, position, angle, widths):
+        super().__init__(patter_type="rectangle")
+        self.position = position
+        self.angle = angle
+        self.widths = widths
+
+class EllipsePattern(Pattern):
+    def __init__(self, position, angle, halfwidths):
+        super().__init__(patter_type="ellipse")
+        self.position = position
+        self.angle = angle
+        self.halfwidths = halfwidths
+
+class PolygonPattern(Pattern):
+    def __init__(self, position, angle, edgepoints):
+        super().__init__(pattern_type="polygon")
+        self.position = position
+        self.angle = angle
+        self.edgepoints = edgepoints
+
+class CirclePattern(Pattern):
+    def __init__(self, position, angle):
+        super().__init__(pattern_type="circle")
+        self.position = position
         self.angle = angle
 
+class GratingPattern(Pattern):
+    '''
+    Quasi 1D structure
+    '''
+    def __init__(self, center, width):
+        super().__init__(pattern_type="grating")
+        self.center = center
+        self.width = width
+
 class Layer:
+    '''
+    Define the information of each layer
+    '''
     def __init__(self, name, background_material, thickness):
         self.__name = name 
         self.__thickness = thickness
@@ -300,6 +338,9 @@ class Layer:
 
 
 class Structure:
+    '''
+    Define the whole multilayer structure composed of layers
+    '''
     def __init__(self):
         self.__layer_map = list()
         self.__material_map = list()

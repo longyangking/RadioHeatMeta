@@ -77,6 +77,9 @@ class Mu:
         return self.__mu_type
 
 class Material:
+    '''
+    Material class for multilayer systems
+    '''
     def __init__(self, name, omega_list, epsilon_list, mu_list):
         self.__name = name
         self.__omega_list = omega_list
