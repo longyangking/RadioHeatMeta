@@ -22,12 +22,14 @@ class Lattice:
     '''
     Lattice for multilayer system
     '''
-    def __init__(self, ax=[1,0], ay=[0,1], verbose=False):
+    def __init__(self, ax=[1,0], ay=[0,1], dimension="no", verbose=False):
         self.__lattice = [np.array(ax), np.array(ay)] 
 
         self.__angle = 0
         self.__area = 0
         self.__reciprocal_lattice = None
+
+        self.__dimension = dimension
 
         self.verbose = verbose
 
@@ -42,7 +44,7 @@ class Lattice:
         Initiate the key parameters of the lattice system
         '''
         ax, ay = self.__lattice
-        self.__area = np.abs(ax[0]*ay[1] - ax[1]*ay[0])
+        self.__area = np.abs(ax[0]*ay[1] - ax[1]*ay[0]) # TODO may bug for 1D case
         self.__angle = np.arccos(
             np.dot(ax, ay) / (np.square(np.dot(ax, ax)) * np.square(np.dot(ay, ay)))
         )
@@ -59,6 +61,9 @@ class Lattice:
 
     def get_lattice(self):
         return self.__lattice
+
+    def get_dimension(self):
+        return self.__dimension
 
     def get_reciprocal_lattice(self):
         return self.__reciprocal_lattice
@@ -79,7 +84,7 @@ class Lattice:
             raise Exception("Please initiate the reciprocal G matrix firstly!")
         return self.__Gx, self.__Gy
 
-    def init_G(self, nG, dimension, truncation="parallelogramic"):
+    def init_G(self, nG, truncation="parallelogramic"):
         '''
         Compute G matrix 
         '''
@@ -88,6 +93,8 @@ class Lattice:
                 dimension=dimension,
                 truncation=truncation
             ))
+
+        dimension = self.__dimension
 
         if (nG <=0) and (dimension != "no"):
             raise Exception("Require number of G more than 1!")

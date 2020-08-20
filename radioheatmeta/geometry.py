@@ -113,3 +113,22 @@ def do_intersect(p1, q1, p2, q2):
     
     return False
 
+def sinc(x):    # TODO Transform into the matrix operation
+    if np.isscalar(x):
+        if x == 0:
+            return 1
+        else:
+            return np.sin(x)/x
+    else:
+        sin_x = np.sin(x)
+        x = np.array(x)
+        positions = np.where(x==0)
+        x[positions] = 1
+        result = sin_x / x
+        result[positions] = 1
+        return result
+
+def jinc(x):
+    if x == 0.0:
+        return 0.5
+    return sp.special.j1(x)/x

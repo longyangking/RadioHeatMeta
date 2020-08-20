@@ -17,26 +17,6 @@
 import numpy as np 
 import scipy as sp 
 
-def sinc(x):
-    if np.isscalar(x):
-        if x == 0:
-            return 1
-        else:
-            return np.sin(x)/x
-    else:
-        sin_x = np.sin(x)
-        x = np.array(x)
-        positions = np.where(x==0)
-        x[positions] = 1
-        result = sin_x / x
-        result[positions] = 1
-        return result
-
-def jinc(x):
-    if x == 0.0:
-        return 0.5
-    return sp.special.j1(x)/x
-
 class RCWA:
     def __init__(self, structure):
 

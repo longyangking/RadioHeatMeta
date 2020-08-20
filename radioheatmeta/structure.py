@@ -25,6 +25,8 @@ from radioheatmeta.material import Epsilon, Mu, Material
 #     TM = 1
 #     Both = 2
 
+MICRON = 1e6
+
 class Pattern:
     '''
     Define the geometrical pattern 
@@ -48,28 +50,28 @@ class Pattern:
 class RectanglePatten(Pattern):
     def __init__(self, position, angle, widths, area):
         super().__init__(patter_type="rectangle", area=area)
-        self.position = position
+        self.position = np.array(position)
         self.angle = angle
         self.widths = widths
 
 class EllipsePattern(Pattern):
     def __init__(self, position, angle, halfwidths, area):
         super().__init__(patter_type="ellipse", area=area)
-        self.position = position
+        self.position = np.array(position)
         self.angle = angle
         self.halfwidths = halfwidths
 
 class PolygonPattern(Pattern):
     def __init__(self, position, angle, edge_list, area):
         super().__init__(pattern_type="polygon", area=area)
-        self.position = position
+        self.position = np.array(position)
         self.angle = angle
         self.edge_list = edge_list
 
 class CirclePattern(Pattern):
     def __init__(self, position, angle, area):
         super().__init__(pattern_type="circle", area=area)
-        self.position = position
+        self.position = np.array(position)
         self.angle = angle
 
 class GratingPattern(Pattern):
@@ -289,38 +291,341 @@ class Layer:
                 name=self.__name
             ))
 
-    def get_epsilon_matrix(self, Gx, Gy):
+    def get_epsilon_matrix(self, Gx, Gy, omega_index):
         '''
-        Get the Fourier transformation of the epsilon of the layer
+        Get the Fourier transformation of the optical parameters of the layer
         '''
+        nG = len(Gx)
+        epsxx = np.zeros((nG, nG), dtype=complex)
+        epsxy = np.zeros((nG, nG), dtype=complex)
+        epsxz = np.zeros((nG, nG), dtype=complex)
+        epsyx = np.zeros((nG, nG), dtype=complex)
+        epsyy = np.zeros((nG, nG), dtype=complex)
+        epsyz = np.zeros((nG, nG), dtype=complex)
+        epszx = np.zeros((nG, nG), dtype=complex)
+        epszy = np.zeros((nG, nG), dtype=complex)
+        epszz = np.zeros((nG, nG), dtype=complex)
 
-    def get_mu_matrix(self, Gx, Gy):
-        '''
-        Get the Fourier transformation of the mu of the layer
-        '''
+        muxx = np.zeros((nG, nG), dtype=complex)
+        muxy = np.zeros((nG, nG), dtype=complex)
+        muxz = np.zeros((nG, nG), dtype=complex)
+        muyx = np.zeros((nG, nG), dtype=complex)
+        muyy = np.zeros((nG, nG), dtype=complex)
+        muyz = np.zeros((nG, nG), dtype=complex)
+        muzx = np.zeros((nG, nG), dtype=complex)
+        muzy = np.zeros((nG, nG), dtype=complex)
+        muzz = np.zeros((nG, nG), dtype=complex)
+
+        for i in range(len(self.__pattern_list)):
+            pattern = self.__pattern_list[i]
+            material = self.__material_list[i]
+
+            # epsilon = material.get_epsilon_at_index(omega_index)
+            # mu = material.get_mu_at_index(omega_index)
+            material_parent = self.__background_material
+            if pattern.parent != -1:
+                material_parent = self.__material_list[pattern.parent]
+
+            pattern_type = pattern.get_pattern_type()
+            if pattern_type == "grating":
+                dvals = self.__transform_grating(pattern, material, material_parent, Gx, Gy, omega_index)
+            elif pattern_type == "rectangle":
+                dvals = self.__transform_rectangle(pattern, material, material_parent, Gx, Gy, omega_index)
+            elif pattern_type == "circle":
+                dvals = self.__transform_circle(pattern, material, material_parent, Gx, Gy, omega_index)
+            elif pattern_type == "ellipse":
+                dvals = self.__transform_ellipse(pattern, material, material_parent, Gx, Gy, omega_index) 
+            elif pattern_type == "polygon":
+                dvals = self.__transform_polygon(pattern, material, material_parent, Gx, Gy, omega_index)
+
+            epsxx += dvals[0]
+            epsxy += dvals[1]
+            epsxz += dvals[2]
+            epsyx += dvals[3]
+            epsyy += dvals[4]
+            espyz += dvals[5]
+            epszx += dvals[6]
+            epszy += dvals[7]
+            epszz += dvals[8]
+
+            muxx += dvals[9]
+            muxy += dvals[10]
+            muxz += dvals[11]
+            muyx += dvals[12]
+            muyy += dvals[13]
+            muyz += dvals[14]
+            muzx += dvals[15]
+            muzy += dvals[16]
+            muzz += dvals[17]
+                
+        # consider the background material
+        eps_background = self.__background_material.get_epsilon_at_index(omega_index)
+        mu_background = self.__background_material.get_mu_at_index(omega_index)
         
+        I_mat = np.identity((nG, nG), dtype=complex)
+        epsxx += eps_background[0,0]*I_mat
+        epsxy += eps_background[0,1]*I_mat
+        epsxz += eps_background[0,2]*I_mat
+        epsyx += eps_background[1,0]*I_mat
+        epsyy += eps_background[1,1]*I_mat
+        espyz += eps_background[1,2]*I_mat
+        epszx += eps_background[2,0]*I_mat
+        epszy += eps_background[2,1]*I_mat
+        epszz += eps_background[2,2]*I_mat
 
-    def __transform_grating_element(G, width):
-        # TODO
+        muxx += mu_background[0,0]*I_mat
+        muxy += mu_background[0,1]*I_mat
+        muxz += mu_background[0,2]*I_mat
+        muyx += mu_background[1,0]*I_mat
+        muyy += mu_background[1,1]*I_mat
+        muyz += mu_background[1,2]*I_mat
+        muzx += mu_background[2,0]*I_mat
+        muzy += mu_background[2,1]*I_mat
+        muzz += mu_background[2,2]*I_mat
 
-    def __transform_grating(epsilon, epsilon_bg, Gx, center, width, area, has_tensor):
-        # TODO
+        return [epsxx, epsxy, epsxz, 
+                epsyx, epsyy, epsyz,
+                epszx, epszy,  epszz,
+                muxx, muxy, muxz, 
+                muyx, muyy, muyz,
+                muzx, muzy, muzz]
+            
+    def __transform_grating_element(G_mat, width):
+        geometry_mat = width * geometry.sinc(G_mat / 2 * width)
+        return geometry_mat
 
-    def __transform_rectangle_element(Gx, Gy, width_x, width_y):
+    def __transform_grating(pattern, material, material_parent, Gx, Gy, omega_index):
+        center = pattern.center * MICRON
+        width = pattern.width *MICRON
 
-    def __transform_rectangle(epsilon, epsilon_bg, Gx, Gy, centers, angle, widths, area, has_tensor):
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gmat = Gx_l - Gx_r 
+        phase = np.exp(1j*Gmat*center)
 
-    def __transform_circle_element(Gx, Gy, radius):
+        eps_parent = material_parent.get_epsilon_at_index(omega_index)
+        mu_parent = material_parent.get_mu_at_index(omega_index)
+        eps = material.get_epsilon_at_index(omega_index)
+        mu = material.get_mu_at_index(omega_index)
 
-    def __transform_circle(epsilon, epsilon_bg, Gx, Gy, centers, radius, area, has_tensor):
+        geometry_mat = self.__transform_grating_element(G_mat, width)     
+        dimension = self.__lattice.get_dimension()
+        if dimension == "one":
+            area = self.__lattice.get_area() * MICRON
+        else:
+            area = self.__lattice.get_area() * np.sqaure(MICRON)
 
-    def __transform_ellipse_element(Gx, Gy, a, b):
+        dval = list()
+        dval_mu = list()
+        for i in range(3):
+            for j in range(3):
+                eps_mat = (eps[i,j] - eps_parent[i,j])*phase*geometry_mat
+                dval.append(eps_mat)
 
-    def __transform_ellipse(epsilon, epsilon_bg, Gx, Gy, centers, angle, half_widths, area, has_tensor):
+                mu_mat = (mu[i,j] - mu_parent[i,j])*phase*geometry_mat
+                dval_mu.append(mu_mat)
+        
+        dval.extend(dval_mu)
+        return dval
 
-    def __transform_polygon_element(Gx, Gy, edge_list, area):
+    def __transform_rectangle_element(Gx_mat, Gy_mat, widths):
+        widthx, widthy = widths
+        geometry_mat = widthx * widthy * geometry.sinc(Gx_mat * widthx / 2) * geometry.sinc(Gy_mat * widthy /2)
+        return geometry_mat
 
-    def __transform_polygon(epsilon, epsilon_bg, Gx, Gy, centers, angle, edge_list, area, has_tensor):
+    def __transform_rectangle(pattern, material, material_parent, Gx, Gy, omega_index):
+        position = pattern.position * MICRON
+        angle = pattern.angle * np.pi/180
+        widths = pattern.widths * MICRON
+
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gy_r, Gy_l = np.meshgrid(Gy, Gy)
+        Gx_mat = Gx_l - Gx_r
+        Gy_mat = Gy_l - Gy_r
+        phase = np.exp(1j*(Gx_mat*position[0] + Gy_mat*position[1]))
+        G_temp = Gx_mat * np.cos(angle) + Gy_mat * np.sin(angle)
+        Gy_mat = -Gx_mat * np.sin(angle) + Gy_mat * np.cos(angle)
+        Gx_mat = G_temp
+        geometry_mat = self.__transform_rectangle_element(Gx_mat, Gy_mat, widths)     
+
+        eps_parent = material_parent.get_epsilon_at_index(omega_index)
+        mu_parent = material_parent.get_mu_at_index(omega_index)
+        eps = material.get_epsilon_at_index(omega_index)
+        mu = material.get_mu_at_index(omega_index)
+
+        dimension = self.__lattice.get_dimension()
+        if dimension == "one":
+            area = self.__lattice.get_area() * MICRON
+        else:
+            area = self.__lattice.get_area() * np.sqaure(MICRON)
+
+        dval = list()
+        dval_mu = list()
+        for i in range(3):
+            for j in range(3):
+                eps_mat = (eps[i,j] - eps_parent[i,j])*phase*geometry_mat
+                dval.append(eps_mat)
+
+                mu_mat = (mu[i,j] - mu_parent[i,j])*phase*geometry_mat
+                dval_mu.append(mu_mat)
+        
+        dval.extend(dval_mu)
+        return dval
+
+    def __transform_circle_element(Gx_mat, Gy_mat, radius):
+        rho = np.sqrt(np.sqaure(Gx_mat) + np.sqaure(Gy_mat)) * radius
+        jinc_mat = geometry.jinc(rho)
+        geometry_mat = 2*np.pi*np.square(radius) * jinc_mat
+        return geometry_mat
+
+    def __transform_circle(pattern, material, material_parent, Gx, Gy, omega_index):
+        position = pattern.position * MICRON
+        radius = pattern.radius * MICRON
+
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gy_r, Gy_l = np.meshgrid(Gy, Gy)
+        Gx_mat = Gx_l - Gx_r
+        Gy_mat = Gy_l - Gy_r
+        phase = np.exp(1j*(Gx_mat*position[0] + Gy_mat*position[1]))
+        geometry_mat = self.__transform_circle_element(Gx_mat, Gy_mat, radius)     
+
+        eps_parent = material_parent.get_epsilon_at_index(omega_index)
+        mu_parent = material_parent.get_mu_at_index(omega_index)
+        eps = material.get_epsilon_at_index(omega_index)
+        mu = material.get_mu_at_index(omega_index)
+
+        dimension = self.__lattice.get_dimension()
+        if dimension == "one":
+            area = self.__lattice.get_area() * MICRON
+        else:
+            area = self.__lattice.get_area() * np.sqaure(MICRON)
+
+        dval = list()
+        dval_mu = list()
+        for i in range(3):
+            for j in range(3):
+                eps_mat = (eps[i,j] - eps_parent[i,j])*phase*geometry_mat
+                dval.append(eps_mat)
+
+                mu_mat = (mu[i,j] - mu_parent[i,j])*phase*geometry_mat
+                dval_mu.append(mu_mat)
+        
+        dval.extend(dval_mu)
+        return dval
+
+    def __transform_ellipse_element(Gx_mat, Gy_mat, halfwidths):
+        a, b = halfwidths
+        rho = np.square(np.sqaure(a*Gx_mat) + np.square(b*Gy_mat))
+        jinc_mat = geometry.jinc(rho)
+        geometry_mat = 2*np.pi*a*b*jinc_mat
+        return geometry_mat
+
+    def __transform_ellipse(pattern, material, material_parent, Gx, Gy, omega_index):
+        position = pattern.position * MICRON
+        angle = pattern.angle * np.pi/180
+        halfwidths = pattern.halfwidths * MICRON
+
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gy_r, Gy_l = np.meshgrid(Gy, Gy)
+        Gx_mat = Gx_l - Gx_r
+        Gy_mat = Gy_l - Gy_r
+        phase = np.exp(1j*(Gx_mat*position[0] + Gy_mat*position[1]))
+        G_temp = Gx_mat * np.cos(angle) + Gy_mat * np.sin(angle)
+        Gy_mat = -Gx_mat * np.sin(angle) + Gy_mat * np.cos(angle)
+        Gx_mat = G_temp
+        geometry_mat = self.__transform_ellipse_element(Gx_mat, Gy_mat, halfwidths)     
+
+        eps_parent = material_parent.get_epsilon_at_index(omega_index)
+        mu_parent = material_parent.get_mu_at_index(omega_index)
+        eps = material.get_epsilon_at_index(omega_index)
+        mu = material.get_mu_at_index(omega_index)
+
+        dimension = self.__lattice.get_dimension()
+        if dimension == "one":
+            area = self.__lattice.get_area() * MICRON
+        else:
+            area = self.__lattice.get_area() * np.sqaure(MICRON)
+
+        dval = list()
+        dval_mu = list()
+        for i in range(3):
+            for j in range(3):
+                eps_mat = (eps[i,j] - eps_parent[i,j])*phase*geometry_mat
+                dval.append(eps_mat)
+
+                mu_mat = (mu[i,j] - mu_parent[i,j])*phase*geometry_mat
+                dval_mu.append(mu_mat)
+        
+        dval.extend(dval_mu)
+        return dval
+
+    def __transform_polygon_element(Gx_mat, Gy_mat, edge_list):
+        polygon_area = geometry.get_polygon_area(edge_list)
+        geometry_mat = np.zeros(Gx_mat.shape, dtype=complex)
+
+        nGx, nGy = Gx_mat.shape
+        for i in range(nGx):
+            for j in range(nGy):
+                u = Gx_mat[i,j]
+                v = Gy_mat[i,j]
+
+                if (u == 0) and (v == 0):
+                    geometry_mat[i,j] = polygon_area
+                else:
+                    length_edge_list = len(edge_list)
+                    for index in range(length_edge_list):
+                        x_cur, y_cur = edge_list[index]
+                        if (index == length_edge_list - 1):
+                            x_next, y_next = edge_list[0]
+                        else:
+                            x_next, y_next = edge_list[i+1]
+
+                if (u == 0):
+                    val = 1j/v*(x_next - x_cur) * np.exp(1j*(u*(x_next + x_cur)/2 + v*(y_next + y_cur)/2)) * geometry.sinc((x_next - x_cur)*u /2 + (y_next-y_cur)*v/2)
+                else:
+                    val = -1j/u*(y_next - y_cur) * np.exp(1j*(u*(x_next + x_cur)/2 + v*(y_next + y_cur)/2)) * geometry.sinc((x_next - x_cur)*u /2 + (y_next-y_cur)*v/2)
+                
+                geometry_mat[i,j] += val
+
+        return geometry_mat
+
+    def __transform_polygon(pattern, material, material_parent, Gx, Gy, omega_index):
+        position = pattern.position * MICRON
+        angle = pattern.angle * np.pi/180
+        edge_list = pattern.edge_list * MICRON
+
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gy_r, Gy_l = np.meshgrid(Gy, Gy)
+        Gx_mat = Gx_l - Gx_r
+        Gy_mat = Gy_l - Gy_r
+        phase = np.exp(1j*(Gx_mat*position[0] + Gy_mat*position[1]))
+        G_temp = Gx_mat * np.cos(angle) + Gy_mat * np.sin(angle)
+        Gy_mat = -Gx_mat * np.sin(angle) + Gy_mat * np.cos(angle)
+        Gx_mat = G_temp
+        geometry_mat = self.__transform_polygon_element(Gx_mat, Gy_mat, edge_list)     
+
+        eps_parent = material_parent.get_epsilon_at_index(omega_index)
+        mu_parent = material_parent.get_mu_at_index(omega_index)
+        eps = material.get_epsilon_at_index(omega_index)
+        mu = material.get_mu_at_index(omega_index)
+
+        dimension = self.__lattice.get_dimension()
+        if dimension == "one":
+            area = self.__lattice.get_area() * MICRON
+        else:
+            area = self.__lattice.get_area() * np.sqaure(MICRON)
+
+        dval = list()
+        dval_mu = list()
+        for i in range(3):
+            for j in range(3):
+                eps_mat = (eps[i,j] - eps_parent[i,j])*phase*geometry_mat
+                dval.append(eps_mat)
+
+                mu_mat = (mu[i,j] - mu_parent[i,j])*phase*geometry_mat
+                dval_mu.append(mu_mat)
+        
+        dval.extend(dval_mu)
+        return dval
 
 class Structure:
     '''
