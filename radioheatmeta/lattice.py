@@ -22,7 +22,7 @@ class Lattice:
     '''
     Lattice for multilayer system
     '''
-    def __init__(self, ax=[1,0], ay=[0,1], dimension="no", verbose=False):
+    def __init__(self, dimension, ax, ay=[0,1], verbose=False):
         self.__lattice = [np.array(ax), np.array(ay)] 
 
         self.__angle = 0
@@ -37,9 +37,9 @@ class Lattice:
         self.__Gy = None
         self.__nG = None
 
-        self.__init_lattice()
+        self.__init_reciprocal_lattice()
 
-    def __init_lattice(self):
+    def __init_reciprocal_lattice(self):
         '''
         Initiate the key parameters of the lattice system
         '''
@@ -84,7 +84,7 @@ class Lattice:
             raise Exception("Please initiate the reciprocal G matrix firstly!")
         return self.__Gx, self.__Gy
 
-    def init_G(self, nG, truncation="parallelogramic"):
+    def init_lattice(self, nG, truncation="parallelogramic"):
         '''
         Compute G matrix 
         '''

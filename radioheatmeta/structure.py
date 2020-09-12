@@ -100,6 +100,7 @@ class Layer:
 
         self.__material_list = list()
         self.__pattern_list = list()
+        self.__omega_list = None
 
         self.verbose = verbose
     
@@ -177,6 +178,9 @@ class Layer:
         )
         self.__pattern_list.append(pattern)
 
+        if self.__omega_list is None:
+            self.__omega_list = material.get_omega_list()
+
     def add_circle_pattern(self, material, position, radius):
         self.__material_list.append(material)
         epsilon_type, mu_type = material.material_type
@@ -188,6 +192,9 @@ class Layer:
             area = geometry.get_circle_area(radius)
         )
         self.__pattern_list.append(pattern)
+
+        if self.__omega_list is None:
+            self.__omega_list = material.get_omega_list()
 
     def add_ellipse_pattern(self, material, position, angle, halfwidths):
         self.__material_list.append(Material)
@@ -201,6 +208,9 @@ class Layer:
             area=geometry.get_ellipse_area(args2)
         )
         self.__pattern_list.append(pattern)
+
+        if self.__omega_list is None:
+            self.__omega_list = material.get_omega_list()
 
     def add_polygon_pattern(self, material, position, angle, edgepoints):
         self.__material_list.append(material)
@@ -218,6 +228,9 @@ class Layer:
         )
         self.__pattern_list.append(pattern)
 
+        if self.__omega_list is None:
+            self.__omega_list = material.get_omega_list()
+
     def add_grating_pattern(self, material, center, width):
         
         self.__material_list.append(material)
@@ -230,6 +243,9 @@ class Layer:
             area=geometry.get_grating_area(width)
         )
         self.__pattern_list.append(pattern)
+
+        if self.__omega_list is None:
+            self.__omega_list = material.get_omega_list()
 
     def __is_contain_in_geometry(self, pattern1, pattern2):
         # define the center of the geometrical pattern
@@ -291,7 +307,7 @@ class Layer:
                 name=self.__name
             ))
 
-    def get_epsilon_matrix(self, Gx, Gy, omega_index):
+    def get_optical_matrices(self, Gx, Gy, omega_index):
         '''
         Get the Fourier transformation of the optical parameters of the layer
         '''
@@ -383,11 +399,11 @@ class Layer:
         muzy += mu_background[2,1]*I_mat
         muzz += mu_background[2,2]*I_mat
 
-        return [epsxx, epsxy, epsxz, 
-                epsyx, epsyy, epsyz,
-                epszx, epszy,  epszz,
-                muxx, muxy, muxz, 
-                muyx, muyy, muyz,
+        return [epsxx, epsxy, epsxz, \
+                epsyx, epsyy, epsyz, \
+                epszx, epszy,  epszz, \
+                muxx, muxy, muxz, \
+                muyx, muyy, muyz, \
                 muzx, muzy, muzz]
             
     def __transform_grating_element(G_mat, width):
@@ -636,16 +652,36 @@ class Structure:
         self.__material_list = material_list
         self.__lattice = lattice
 
-    def __init__(self, structure):
-        layer_list = structure.get_layer_list()
-        material_list = structure.get_material_list()
-        lattice = structure.get_lattice()
-        self.__layer_list = layer_list.copy()
-        self.__material_list = material_list.copy()
-        self.__lattice = lattice
+        self.__omega_list = None
+        self.__G = None
+
+    # def __init__(self, structure, verbose=False):
+    #     layer_list = structure.get_layer_list()
+    #     material_list = structure.get_material_list()
+    #     lattice = structure.get_lattice()
+    #     self.__layer_list = layer_list.copy()
+    #     self.__material_list = material_list.copy()
+    #     self.__lattice = lattice
+    #     self.__G = None
+
+    #     self.verbose = verbose
+
+    def init_structure(self, nG, truncation="parallelogramic"):
+        self.__lattice.init_lattice(nG=nG, truncation=truncation)
+        self.__G = self.__lattice.get_G()
+        self.__omega_list = self.__layer_list[-1].get_omega_list()
+            
+    def get_G(self):
+        return self.__G
+
+    def get_nG(self):
+        return self.__lattice.get_nG()
 
     def get_lattice(self):
         return self.__lattice
+
+    def get_omega_list(self):
+        return self.__omega_list
 
     def add_material(self, material):
         self.__material_list.append(material)
@@ -669,8 +705,14 @@ class Structure:
         if index is not None:
             del self.__layer_list[index]
 
+        if self.verbose:
+            print("The layer (name: {name}) has been deleted!".format(name))
+
     def delete_layer_by_layer(self, layer):
         self.delete_layer_by_name(layer.name)
+
+        if self.verbose:
+            print("The layer (name: {name}) has been deleted!".format(layer.name))
 
     def get_layer_by_index(self, index):
         if index < 0:
@@ -680,6 +722,25 @@ class Structure:
             raise Exception("Index: larger than the length of the layer list")
         return self.__layer_list[index]    
 
+    def set_layer_by_index(self, index, layer):
+        if index < 0:
+            raise Exception("Index: smaller than zero for the layer list")
+        if len(self.__layer_list) <= index:
+            #return None
+            raise Exception("Index: larger than the length of the layer list")
+        self.__layer_list[index] = layer
+
+        if self.verbose:
+            print("Set the {index}-th layer as the new layer (name: {name})".format(
+                index=index,
+                name=layer.name
+            ))
+
+    def get_layer_index_by_name(self, name):
+        for index in range(len(self.__layer_list)):
+            if self.__layer_list[index].name == name:
+                return index
+    
     def get_layer_by_name(self, name):
         for layer in self.__layer_list:
             if layer.name == name:
@@ -704,6 +765,3 @@ class Structure:
         if len(self.__layer_list) <= index:
             raise Exception("Index: larger than the length of the layer map")
         del self.__layer_list[index]   
-
-
-    

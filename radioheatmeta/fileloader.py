@@ -18,7 +18,8 @@ import numpy as np
 from system import Epsilon, Mur
 
 class FileLoader:
-    def __init__(self, verbose=False):
+    def __init__(self, filename, verbose=False):
+        self.filename = filename
         self.__omega_list = None
         self.__epsilon_list = None
         self.__mur_list = None

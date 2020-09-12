@@ -16,40 +16,14 @@
 
 import numpy as np
 import system
-import rcwa
-from fileloader import FileLoader
+from radioheatmeta.calculation import RCWA
 
 class Options:
     def __init__(self):
-        self.__FMM_rule = "maivfmm"
-        self.__integral_method = "gausskronrod"
         self.__polarization = "both"
-        self.__print_intermediate = False
-        self.__output_flag = ""
-        self.__integral_K_parallel = True
-        self.__kx_integral_preset = False
-        self.__ky_integral_preset = False
+        self.verbose = False
         self.__truncation = "circular"
-
-    @property
-    def FMM_rule(self):
-        return self.__FMM_rule
-    
-    @FMM_rule.setter
-    def FMM_rule(self, rule):
-        if rule not in ["maivfmm", "spatialadapative"]:
-            raise Exception("unknown FMM rule! only support 2 kinds of rules: maivfmm and spatialadapative")
-        self.__FMM_rule = rule
-
-    @property
-    def integral_method(self):
-        return self.__integral_method
-
-    @integral_method.setter
-    def integral_method(self, method):
-        if method not in ["gausskronrod", "gausslegendre"]:
-            raise Exception("unknown integral method! only support 2 kinds of methods: gausskronrod and gausslegendre")
-        self.__integral_method = method
+        self.nG = 100
 
     @property
     def polarization(self):
@@ -62,149 +36,101 @@ class Options:
         self.__polarization = polarization
 
     @property
-    def output_flag(self):
-        return self.__output_flag
-
-    @output_flag.setter
-    def output_flag(self, flag):
-        self.__output_flag = flag
-
-    @property
-    def print_intermediate(self):
-        return self.__print_intermediate
-
-    @print_intermediate.setter
-    def print_intermediate(self, status):
-        self.__print_intermediate = status
-
-    @property
-    def integral_K_parallel(self):
-        return self.__integral_K_parallel
-    
-    @integral_K_parallel.setter
-    def integral_K_parallel(self, status):
-        self.__integral_K_parallel = status
-
-    @property
-    def kx_integral_preset(self):
-        return self.__kx_integral_preset
-
-    @kx_integral_preset.setter
-    def kx_integral_preset(self, status):
-        self.__kx_integral_preset = status
-
-    @property
-    def ky_integral_preset(self):
-        return self.__ky_integral_preset
-
-    @ky_integral_preset.setter
-    def ky_integral_preset(self, status):
-        self.__ky_integral_preset = status
-
-    @property
     def truncation(self):
         return self.__truncation
 
     @truncation.setter
     def truncation(self, truncation):
         if truncation not in ["circular", "parallelogramic"]:
-            raise Exception("unknown truncation! only support 3 kinds of truncations: circular and parallelogramic")
+            raise Exception("unknown truncation! only support 2 kinds of truncations: circular and parallelogramic")
         self.__truncation = truncation
 
 class Simulation:
-    def __init__(self, verbose=False):
-        self.__num_G = 0
-        self.__omega_list = None
-        self.__num_omega = 0
-        self.__target_z = -1
+    def __init__(self, structure=None, options=None, verbose=False):
+        self.__structure = structure
+        self.__omega_list = structure.get_omega_list()
 
-        self.__phi = None
-        self.__kx_start = 0
-        self.__kx_end = 0
-        self.__ky_start = 0
-        self.__ky_end = 0
-        self.__num_kx = 0
-        self.__num_ky = 0
-
-        self.__lattice = None
-        self.__reciprocal_lattice = None
-        
-        self.__prefactor = 0 
-        
-        self.__layer_map = None
-        self.__material_map = None # the list of [name, material class]
-        self.__structure = None
-    
-        self.__target_layer = 0
-
-        self.__Gx_mat = None
-        self.__Gy_mat = None
-        self.__E_matrices = None
-        self.__grand_imaginary_matrices = None
-        self.__eps_zz_inv_matrices = None
-
-        self.__source_list = None
-        self.__thickness_list = None
-        self.__dimension = "no"
-        self.__options = None
-
-        self.__num_of_thread = 1
-        self.__current_omega_index = -1
-
+        self.__options = options
+        if options is None:
+            self.__options = Options()
         self.verbose = verbose
 
-    def add_material(self, name, infile):
-        num_of_material = len(self.__material_map)
-        for i in range(num_of_material):
-            if self.__material_map[i][0] == name:
-                raise Exception("{name}: material already exist!".format(name=name))
+        self.__target_z = 0
+        self.__target_layer_index = 0
+    
+    def init_simulation(self):
+        pass
 
-        fileloader = FileLoader()
-        material = system.Material(name=name,
-            omega_list=fileloader.get_omega_list(),
-            epsilon_list=fileloader.get_epsilon_list(),
-            mur_list=fileloader.get_mur_list()
+    def add_layer(self, layer):
+        self.__structure.add_layer(layer)
+
+    def set_layer(self, index, layer):
+        self.__structure.set_layer_by_index(
+            index=index,
+            layer=layer
         )
-        if self.verbose:
-            print("import material:[{name}] into the simulation".format(name=name))
 
-        self.__material_map.append([name, material])
-        self.__structure.add_material(material)
+    def delete_layer_by_name(self, name):
+        self.__structure.delete_layer_by_name(name)
 
+    def set_source_layer_by_name(self, name):
+        self.__structure.set_source_layer_by_name(name)
 
-    def add_material(self, name, omega_list, epsilon_list):
+    def set_probe_layer_by_name(self, name):
+        self.__target_layer_index = self.__structure.get_layer_index_by_name(name)
 
-    def set_material(self, name, epsilon, mur, material_type):
+    def delete_layer_by_index(self, index):
+        self.__structure.delete_layer_by_index(name)
 
-    def add_layer(self, name, thickness, material_name):
+    def set_source_layer_by_index(self, index):
+        self.__structure.set_source_layer_by_index(index)
 
-    def set_layer(self, name, thickness, material_name):
-
-    def set_layer_thickness(self, name, thickness):
-
-    def add_layer_copy(self, name, original_name):
-
-    def delete_layer(self, name):
-
-    def set_source_layer(self, name):
-
-    def set_probe_layer(self, name):
+    def set_probe_layer_by_index(self, index):
+        self.__target_layer_index = index
 
     def set_probe_layer_z_coordinate(self, target_z):
+        self.__target_z = target_z
 
-    def set_num_of_G(self, num_G):
+    def set_options(self, options):
+        self.__options = options
+
+    def output_sys_info(self):
+
+    def output_layer_pattern_realization(self, omege_index, name, Nu, Nv, filename):
+        if (Nu <= 0) or (Nv <= 0):
+            raise Exception("Number of point needs to be positive!")
+
+        dx = self.__lattice.bx[0]
+        if (Nu > 1):
+            dx = dx/(Nu - 1)
+
+        dy = np.hypot(self.__lattice.by[0], self.__lattice.by[1])
+        if (Nv > 1):
+            dy = dy/(Nv - 1)
+
+        position = np.zeros(3)
+        epsilon = np.zeros(9, dtype=complex)
+
+        # TODO Get pattern and output to the file
+
+    def set_num_of_G(self, nG):
+        self.__structure.init_structure(nG=nG, truncation=self.__options.truncation)
+
+    def get_num_of_G(self):
+        return self.__structure.get_nG()
+
+    def get_G(self):
+        return self.__structure.get_G()
 
     def get_phi(self):
         if self.__phi is None:
             raise Exception("Phi is None, Please integrate firstly!")
         return self.__phi
 
-    def get_omega(self):
-        if self.__omega_list is None:
-            raise Exception("Omega list is None in the simulation!")
-        return self.__omega_list
-
-    def get_epsilon(self, omege_index, position):
+    def get_optical_parameters(self, omege_index, position):
+        '''
+        Get the optical parameters retrievaled by RCWA
+        '''
         MICRON = 1e6 # micro meter unit
         position = MICRON*position # convert the SI unit (m) into the micro meter (um)
         if omege_index < 0:
@@ -242,45 +168,19 @@ class Simulation:
         
         # TODO need to think carefully
 
+    def get_phi_at_kx_ky(self, omega_index, kx, ky, target_layer_index, target_z):
+        if (omega_index >= len(self.__omega_list)) or (omega_index < 0):
+            raise Exception("Omega_index: Out of range! [{0} - {1}]".format(0, len(self.__omega_list)-1))
 
-    def output_layer_pattern_realization(self, omege_index, name, Nu, Nv, filename):
-        if (Nu <= 0) or (Nv <= 0):
-            raise Exception("Number of point needs to be positive!")
-
-        dx = self.__lattice.bx[0]
-        if (Nu > 1):
-            dx = dx/(Nu - 1)
-
-        dy = np.hypot(self.__lattice.by[0], self.__lattice.by[1])
-        if (Nv > 1):
-            dy = dy/(Nv - 1)
-
-        position = np.zeros(3)
-        epsilon = np.zeros(9, dtype=complex)
-
-        # TODO Get pattern and output to the file
-
-    def get_num_of_omega(self):
-        return len(self.__omega_list)
-
-    def init_simulation(self):
-
-
-    def get_phi_at_kx_ky(self, omega_index, kx, ky=0):
-
-    def get_num_of_G(self):
-
-    def output_sys_info(self):
-
-    def opt_print_intermediate(self, output_flat=""):
-
-    def opt_only_compute_TE(self):
-
-    def opt_only_compute_TM(self):
-
-    def opt_set_lattice_truncation(self, truncation):
-
-    def set_thread(self, num_thread):
+        rcwa = calculation.RCWA(self.__structure, verbose=self.verbose)
+        poyntingflux = rcwa.get_poynting_flux(
+            kx=kx, ky=ky, 
+            omega_index=omega_index, 
+            target_layer_index=target_layer_index, 
+            target_z=target_z, 
+            polarization=self.__options.polarization
+        )
+        phi = self.__omega_list[omega_index]
 
     def set_kx_integral(self, points, end=0):
 
@@ -290,22 +190,13 @@ class Simulation:
 
     def set_ky_integral_sym(self, points, end=0):
 
-    def integrate_ky_ky(self):
+    def integrate_ky_ky(self, n_core=1):
 
-    def integrate_kx_ky_MPI(self, rank, size):
+        if n_core > 1:
+            from multiprocessing import Pool
+            from multiprocessing.dummy import Pool as ThreadPool
 
-    def integrate_kx_ky_GPU(self):
 
-    def __integrate_kx_ky_internal(self, start, end, parallel=False, rank=0):
-
-    def __build_RCWA_matrices(self):
-
-    def __reset_simulation(self):
-
-    def __set_target_layer_by_layer(self, layer):
-
-    def __get_structure(self):
-    
 class SimulationPlanar(Simulation):
     pass
 

@@ -17,6 +17,7 @@
 #  Define several operations for type conversions or Fourier transformations of material data 
 
 import numpy as np 
+from radioheatmeta.fileloader import FileLoader
 
 class Epsilon:
     def __init__(self, epsilon_val, epsilon_type="scalar"):
@@ -90,6 +91,18 @@ class Material:
             raise Exception("Zero vals in the epsilon list for the material \"{name}\"".format(name=self.__name))
         if len(self.__mu_list) == 0:
             raise Exception("Zero vals in the mu list for the material \"{name}\"".format(name=self.__name))
+
+    def __init__(self, name, omega_list, epsilon_vals, mu_vals, epsilon_type="scalar", mu_type="scalar"):
+        self.__name = name
+        self.__omega_list = omega_list
+        self.__epsilon_list = list()
+        self.__mu_list = list()
+
+        for i in range(len(self.__omega_list)):
+            epsilon = Epsilon(epsilon_val=epsilon_vals[i], epsilon_type=epsilon_type)
+            mu = Mu(mu_val=mu_vals[i], mu_type=mu_type)
+            self.__epsilon_list.append(epsilon)
+            self.__mu_list.append(mu)
     
     @property
     def name(self):
@@ -132,3 +145,18 @@ class Material:
 
     def get_mu_list(self):
         return self.__mu_list
+
+## TODO
+def load_material(name, filename, verbose=False):
+    fileloader = FileLoader(filename, verbose=verbose)
+    material = Material(
+        name=name,
+        omega_list=fileloader.get_omega_list(),
+        epsilon_list=fileloader.get_epsilon_list(),
+        mur_list=fileloader.get_mur_list()
+    )
+    if self.verbose:
+        print("import material:[{name}] into the simulation".format(name=name))
+
+    self.__material_map.append([name, material])
+    self.__structure.add_material(material)
