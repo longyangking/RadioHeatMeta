@@ -16,8 +16,7 @@
 
 #  Define several operations for type conversions or Fourier transformations of material data 
 
-import numpy as np 
-from radioheatmeta.fileloader import FileLoader
+import numpy as np
 
 class Epsilon:
     def __init__(self, epsilon_val, epsilon_type="scalar"):
@@ -34,9 +33,9 @@ class Epsilon:
         Transform the all data type into the tensor
         '''
         if self.__epsilon_type == "scalar":
-            epsilon_val = np.diag(self.__epsilon_val * np.ones(3,dtype=complex), dtype=complex)
+            epsilon_val = np.diag(self.__epsilon_val * np.ones(3,dtype=complex))
         elif self.__epsilon_type == "diagonal":
-            epsilon_val = np.diag(self.__epsilon_val, dtype=complex)
+            epsilon_val = np.diag(self.__epsilon_val)
         
         self.__epsilon_val = epsilon_val
 
@@ -63,9 +62,9 @@ class Mu:
         Transform the all data type into the tensor
         '''
         if self.__mu_type == "scalar":
-            mu_val = np.diag(self.__mu_val * np.ones(3,dtype=complex), dtype=complex)
+            mu_val = np.diag(self.__mu_val * np.ones(3,dtype=complex))
         elif self.__mu_type == "diagonal":
-            mu_val = np.diag(self.__mu_val, dtype=complex)
+            mu_val = np.diag(self.__mu_val)
         
         self.__mu_val = mu_val
 
@@ -148,7 +147,8 @@ class Material:
 
 ## TODO
 def load_material(name, filename, verbose=False):
-    fileloader = FileLoader(filename, verbose=verbose)
+    import radioheatmeta.fileloader as FL
+    fileloader = FL.FileLoader(filename, verbose=verbose)
     material = Material(
         name=name,
         omega_list=fileloader.get_omega_list(),

@@ -15,14 +15,14 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import numpy as np 
-from system import Epsilon, Mur
+import radioheatmeta.material as Material
 
 class FileLoader:
     def __init__(self, filename, verbose=False):
         self.filename = filename
         self.__omega_list = None
         self.__epsilon_list = None
-        self.__mur_list = None
+        self.__mu_list = None
         self.__num_of_omega = 0
         self.__pre_set = False
         self.verbose = verbose
@@ -62,17 +62,17 @@ class FileLoader:
                     eps_yz = eps_re_yz - 1j*eps_im_yz
                     epsilon_vals = np.array([[eps_xx, eps_xy, eps_xz], [np.conj(eps_xy), eps_yy, eps_yz], [np.conj(eps_xz), np.conj(eps_yz), eps_zz]], dtype=complex)
 
-                epsilon = Epsilon(epsilon_vals, epsilon_type)
+                epsilon = Material.Epsilon(epsilon_vals, epsilon_type)
                 self.__epsilon_list.append(epsilon)  
 
                 line = f.readline()
     
-    def load_mur(self, filename):
+    def load_mu(self, filename):
         # Check type
-        mur_type = 0
+        mu_type = 0
         with open(filename, 'r') as f:
             line = f.readline()
-            mur_type = self.__check_type(line, filename)
+            mu_type = self.__check_type(line, filename)
 
         # Read data
         with open(filename, 'r') as f:
@@ -84,26 +84,26 @@ class FileLoader:
                 self.__omega_list.append(omega)
 
                 # Load epsilon data based on its type
-                if mur_type == "scalar":
-                    mur_re, mur_im = line_data[1:]
-                    mur_vals = mur_re - 1j*mur_im
+                if mu_type == "scalar":
+                    mu_re, mu_im = line_data[1:]
+                    mu_vals = mu_re - 1j*mu_im
                     
                 elif epsilon_type == "diagonal":
-                    mur_re_xx, mur_im_xx, mur_re_yy, mur_im_yy, mur_re_zz, mur_im_zz = line_data[1:]
-                    mur_vals = np.array([mur_re_xx - 1j*mur_im_xx, mur_re_yy - 1j*mur_im_yy, mur_re_zz - 1j*mur_im_zz], dtype=complex)
+                    mu_re_xx, mu_im_xx, mu_re_yy, mu_im_yy, mu_re_zz, mu_im_zz = line_data[1:]
+                    mu_vals = np.array([mu_re_xx - 1j*mu_im_xx, mu_re_yy - 1j*mu_im_yy, mu_re_zz - 1j*mu_im_zz], dtype=complex)
 
                 else: # Tensor type
-                    mur_re_xx, mur_im_xx, mur_re_yy, mur_im_yy, mur_re_zz, mur_im_zz, mur_re_xy, mur_im_xy, mur_re_xz, mur_im_xz, mur_re_yz, mur_im_yz = line_data[1:]
-                    mur_xx = mur_re_xx - 1j*mur_im_xx
-                    mur_yy = mur_re_yy - 1j*mur_im_yy
-                    mur_zz = mur_re_zz - 1j*mur_im_zz
-                    mur_xy = mur_re_xy - 1j*mur_im_xy
-                    mur_xz = mur_re_xz - 1j*mur_im_xz
-                    mur_yz = mur_re_yz - 1j*mur_im_yz
-                    mur_vals = np.array([[mur_xx, mur_xy, mur_xz], [np.conj(mur_xy), mur_yy, mur_yz], [np.conj(mur_xz), np.conj(mur_yz), mur_zz]], dtype=complex)
+                    mu_re_xx, mu_im_xx, mu_re_yy, mu_im_yy, mu_re_zz, mu_im_zz, mu_re_xy, mu_im_xy, mu_re_xz, mu_im_xz, mu_re_yz, mu_im_yz = line_data[1:]
+                    mu_xx = mu_re_xx - 1j*mu_im_xx
+                    mu_yy = mu_re_yy - 1j*mu_im_yy
+                    mu_zz = mu_re_zz - 1j*mu_im_zz
+                    mu_xy = mu_re_xy - 1j*mu_im_xy
+                    mu_xz = mu_re_xz - 1j*mu_im_xz
+                    mu_yz = mu_re_yz - 1j*mu_im_yz
+                    mu_vals = np.array([[mu_xx, mu_xy, mu_xz], [np.conj(mu_xy), mu_yy, mu_yz], [np.conj(mu_xz), np.conj(mu_yz), mu_zz]], dtype=complex)
 
-                mur = Mur(mur_vals, mur_type)
-                self.__mur_list.append(mur)  
+                mu = Material.Mu(mu_vals, mu_type)
+                self.__mu_list.append(mu)  
 
                 line = f.readline()
 
@@ -129,8 +129,8 @@ class FileLoader:
     def get_epsilon_list(self):
         return self.__epsilon_list
 
-    def get_mur_list(self):
-        return self.__mur_list
+    def get_mu_list(self):
+        return self.__mu_list
 
     def get_num_of_omega(self):
         return len(self.__omega_list)
