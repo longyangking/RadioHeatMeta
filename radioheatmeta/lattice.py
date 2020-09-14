@@ -16,8 +16,6 @@
 
 import numpy as np 
 
-DBL_EPSILON = 2.2204460492503131e-16 # Smallest double value
-
 class Lattice:
     '''
     Lattice for multilayer system
@@ -29,6 +27,8 @@ class Lattice:
         self.__area = 0
         self.__reciprocal_lattice = None
 
+        if dimension not in ["no", "one", "two"]:
+            raise Exception("Unknown dimension type: {dimension}. Only support: no, one or two.".format(dimension=dimension))
         self.__dimension = dimension
 
         self.verbose = verbose
@@ -88,13 +88,12 @@ class Lattice:
         '''
         Compute G matrix 
         '''
+        dimension = self.__dimension
         if self.verbose:
             print("Initiating G matrix with the dimension [{dimension}] and the truncation [{truncation}] ... ".format(
                 dimension=dimension,
                 truncation=truncation
             ))
-
-        dimension = self.__dimension
 
         if (nG <=0) and (dimension != "no"):
             raise Exception("Require number of G more than 1!")
@@ -104,14 +103,14 @@ class Lattice:
             raise Exception("Unknown truncation type: {truncation}. Only support: circular, parallelogramic".format(truncation=truncation))
 
         if (dimension == "no"):
-            Gx, Gy, nG = __get_G_parallelogramic(nG=1, dimension)
+            Gx, Gy, nG = self.__get_G_parallelogramic(nG, dimension)
         elif (dimension == "one"):
-            Gx, Gy, nG = __get_G_parallelogramic(nG, dimension)
+            Gx, Gy, nG = self.__get_G_parallelogramic(nG, dimension)
         else: # 2D dimension
             if (truncation == "circular"):
-                Gx, Gy, nG = __get_G_circular(nG, dimension)
+                Gx, Gy, nG = self.__get_G_circular(nG, dimension)
             else:
-                Gx, Gy, nG = __get_G_parallelogramic(nG, dimension)
+                Gx, Gy, nG = self.__get_G_parallelogramic(nG, dimension)
 
         if self.verbose:
             print("G matrix with the number [{nG}]".format(
@@ -145,6 +144,8 @@ class Lattice:
         ]
         d = abs(dv[0]*Lk_prod[0] + dv[1]*Lk_prod[1] + dv[2]*Lk_prod[2])
 
+        DBL_EPSILON = 2.2204460492503131e-16 # Smallest double value
+        
         return d < 2*DBL_EPSILON*maxlen
 
     def __sort_G(self, G, Lk_prod):
@@ -189,6 +190,11 @@ class Lattice:
         vext21 = 2*v_extent + 1
         G_temp = np.zeros((uext21*vext21,2))
 
+        if self.verbose:
+            print("Extended reciprocal space: [{0}*{1}]...".format(
+                uext21, vext21
+            ))
+
         for i in range(uext21):
             for j in range(vext21):
                 G_temp[i+j*uext21, 0] = i - u_extent
@@ -203,6 +209,7 @@ class Lattice:
             if not self.__is_G_same(G_temp[i-1], G_temp[i], Lk):
                 # Get the circular radius in the momentum space
                 nG = i
+                break
     
         Gx = G_temp[:nG, 0]
         Gy = G_temp[:nG, 1]
@@ -218,21 +225,21 @@ class Lattice:
         Compute G matrix for the system using parallelogramic trunctions
         '''
         if (dimension == "one"): # 1D case
-            m = int(nG/2)
-            nG = 2*m + 1
+            M = int(nG/2)
+            nG = 2*M + 1
             Gx_list, Gy_list = np.zeros(nG), np.zeros(1)
             for i in range(-M, M+1):
-                Gx_list(i+M) = i
+                Gx_list[i+M] = i
             Gx_mat, Gy_mat = np.meshgrid(Gx_list, Gy_list)
         else: # 2D case
             n_root = int(np.sqrt(nG))
             if (n_root % 2 ==0) and (n_root > 0):
                 n_root -= 1
-            m = int(n_root / 2)
+            M = int(n_root / 2)
 
             G_list = np.zeros(n_root)
             for i in range(-M, M+1):
-                G_list(i+M) = i
+                G_list[i+M] = i
             Gx_mat, Gy_mat = np.meshgrid(G_list, G_list)
             nG = np.power(n_root, 2)
 
