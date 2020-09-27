@@ -95,6 +95,10 @@ class Simulation:
         self.__options = options
 
     def output_sys_info(self):
+        '''
+        Print structure details, simulation options and settings
+        '''
+        pass
 
     def output_layer_pattern_realization(self, omege_index, name, Nu, Nv, filename):
         if (Nu <= 0) or (Nv <= 0):
@@ -139,34 +143,39 @@ class Simulation:
             raise Exception("Omega index of of range!")
 
         # initiate the RCWA for the given omega
-        if omege_index != self.__current_omega_index:
-            self.__current_omega_index = omege_index
-            self.__build_RCWA_matrices()
+        rcwa = calculation.RCWA(self.__structure, verbose=self.verbose)
 
         layer_index = 0
         offset = 0
-        num_of_layer = self.__structure.get_num_of_layer()
-        for i in range(num_of_layer):
-            if (position[2] > offset) and (position[2] <= offset + self.__thickness_list[i]):
+        layers = self.__structure.get_layers()
+        thickness_list = self.__structure.get_thickness_list()
+        n_layer = len(layers)
+        for i in range(n_layer):
+            if (position[2] > offset) and (position[2] <= offset + thickness_list[i]):
                 layer_index = i
                 break
-            offset += self.__thickness_list[i]
+            offset += thickness_list[i]
 
         # only one layer exist
         if (layer_index == 0) and (position[2] > offset):
-            layer_index = num_of_layer - 1
+            layer_index = num_layer - 1
 
-        Gx_r, Gx_l = rcwa.mesh_grid(self.__Gx_mat, self.__Gx_mat)
-        Gy_r, Gy_l = rcwa.mesh_grid(self.__Gy_mat, self.__Gy_mat)
+        Gx, Gy = self.__structure.get_G()
+        nG = self.__structure.get_nG()
+        Gx_r, Gx_l = np.meshgrid(Gx, Gx)
+        Gy_r, Gy_l = np.meshgrid(Gy, Gy)
 
         Gx_mat = Gx_l - Gx_r
         Gy_mat = Gy_l - Gy_r
-        r1, r2, r3, r4 = 0, self.__num_G, self.__num_G, 2*self.__num_G
-        pos = (self.__num_G - 1)/2
-        if (self.__options.truncation == "circular") and (self.__dimension == "two"):
+        r1, r2, r3, r4 = 0, nG, nG, 2*nG
+        pos = (nG - 1)/2
+        if (self.__options.truncation == "circular") and (self.__structure.get_dimension() == "two"):
             pos = 0
         
-        # TODO need to think carefully
+        x, y, z = position
+        phase = np.exp(-1j*(Gx_mat[pos]*x + Gy_mat[0]*y))
+
+        # TODO re-construct the real-space distribution of the optical parameters based on results from the Fourier transformations
 
     def get_phi_at_kx_ky(self, omega_index, kx, ky, target_layer_index, target_z):
         if (omega_index >= len(self.__omega_list)) or (omega_index < 0):
@@ -180,17 +189,21 @@ class Simulation:
             target_z=target_z, 
             polarization=self.__options.polarization
         )
-        phi = self.__omega_list[omega_index]
+        c0 = 299792458.0 # the light speed in the vacuum
+        omega = self.__omega_list[omega_index]
+        phi = omega/c_0/(2*np.pi)*poyntingflux
+        return phi
 
-    def set_kx_integral(self, points, end=0):
+    def set_kx_integral(self, kpoints):
 
-    def set_kx_integral_sym(self, points, end=0):
+    def set_kx_integral_sym(self, points):
 
-    def set_ky_integral(self, points, end=0):
+    def set_ky_integral(self, kpoints):
 
     def set_ky_integral_sym(self, points, end=0):
 
     def integrate_ky_ky(self, n_core=1):
+
 
         if n_core > 1:
             from multiprocessing import Pool
